@@ -22,7 +22,7 @@ export const SituationalSummaries = () => {
     {
       id: '1',
       type: 'ai',
-      content: 'Hello! I\'m your AI Situational Analysis Assistant powered by Gemini. Ask me anything about the current event status, crowd conditions, or safety concerns.',
+      content: 'Hello! I am your AI Situational Analysis Assistant powered by Gemini. Ask me anything about the current event status, crowd conditions, or safety concerns.',
       timestamp: new Date().toLocaleTimeString(),
       insights: ['3 active incidents requiring attention', '15% above normal crowd density', 'Weather conditions: Favorable'],
       recommendations: ['Monitor Gate 3 closely', 'Consider opening auxiliary exits']
@@ -83,7 +83,7 @@ export const SituationalSummaries = () => {
   };
 
   const quickQueries = [
-    'What\'s the current crowd density?',
+    'What is the current crowd density?',
     'Any active incidents?',
     'Show me safety status',
     'Weather impact analysis'
@@ -196,7 +196,7 @@ export const SituationalSummaries = () => {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Response Time</span>
-                <Badge variant="outline">< 2s</Badge>
+                <Badge variant="outline">Less than 2s</Badge>
               </div>
             </div>
           </Card>
