@@ -10,7 +10,7 @@ export const CommandDashboard = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className="flex h-screen bg-slate-900 text-white">
+    <div className="flex h-screen bg-background text-foreground">
       <Sidebar 
         selectedView={selectedView}
         setSelectedView={setSelectedView}

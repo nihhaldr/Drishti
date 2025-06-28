@@ -1,14 +1,17 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
+export type AlertType = 'crowd_density' | 'medical_emergency' | 'security_threat' | 'lost_person' | 'fire_hazard' | 'weather' | 'general';
+export type AlertSeverity = 'low' | 'medium' | 'high' | 'critical';
+
 export interface Alert {
   id: string;
   event_id?: string;
   incident_id?: string;
   title: string;
   message?: string;
-  alert_type: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
+  alert_type: AlertType;
+  severity: AlertSeverity;
   location_name?: string;
   latitude?: number;
   longitude?: number;
