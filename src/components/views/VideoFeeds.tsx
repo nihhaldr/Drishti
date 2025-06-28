@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +33,89 @@ export const VideoFeeds = () => {
     streamUrl: ''
   });
 
+  const VideoPlayer = ({ feed }: { feed: CameraFeed }) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [hasError, setHasError] = useState(false);
+
+    useEffect(() => {
+      if (feed.streamUrl && videoRef.current) {
+        const video = videoRef.current;
+        setIsLoading(true);
+        setHasError(false);
+
+        const handleLoadedData = () => {
+          setIsLoading(false);
+          console.log(`Stream loaded for ${feed.name}`);
+        };
+
+        const handleError = (e: Event) => {
+          console.error(`Stream error for ${feed.name}:`, e);
+          setHasError(true);
+          setIsLoading(false);
+        };
+
+        video.addEventListener('loadeddata', handleLoadedData);
+        video.addEventListener('error', handleError);
+
+        // Try to load the stream
+        video.load();
+
+        return () => {
+          video.removeEventListener('loadeddata', handleLoadedData);
+          video.removeEventListener('error', handleError);
+        };
+      }
+    }, [feed.streamUrl, feed.name]);
+
+    if (!feed.streamUrl) {
+      return (
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center">
+          <Camera className="w-12 h-12 text-primary/60" />
+        </div>
+      );
+    }
+
+    return (
+      <>
+        {isLoading && (
+          <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-10">
+            <div className="text-white text-center">
+              <div className="animate-spin w-8 h-8 border-2 border-white border-t-transparent rounded-full mx-auto mb-2"></div>
+              <p className="text-sm">Loading stream...</p>
+            </div>
+          </div>
+        )}
+        
+        {hasError ? (
+          <div className="absolute inset-0 bg-red-900/80 flex flex-col items-center justify-center">
+            <AlertTriangle className="w-8 h-8 text-red-400 mb-2" />
+            <p className="text-red-200 text-sm text-center px-4">
+              Unable to load stream from this URL. Please check:
+              <br />• Camera is online and accessible
+              <br />• URL format is correct
+              <br />• Network connectivity
+            </p>
+          </div>
+        ) : (
+          <video
+            ref={videoRef}
+            className="w-full h-full object-cover"
+            autoPlay
+            muted
+            playsInline
+            controls={false}
+          >
+            <source src={feed.streamUrl} type="video/mp4" />
+            <source src={feed.streamUrl} type="application/x-mpegURL" />
+            <source src={feed.streamUrl.replace('rtmp://', 'http://').replace(':1935', ':8080/hls')} type="application/x-mpegURL" />
+            Your browser does not support the video tag.
+          </video>
+        )}
+      </>
+    );
+  };
+
   const handleAddFeed = () => {
     if (newFeed.name && newFeed.location && newFeed.streamUrl) {
       const feed: CameraFeed = {
@@ -48,6 +130,7 @@ export const VideoFeeds = () => {
       setFeeds([...feeds, feed]);
       setNewFeed({ name: '', location: '', streamUrl: '' });
       setIsAddDialogOpen(false);
+      console.log('Added new camera feed:', feed);
     }
   };
 
@@ -69,11 +152,13 @@ export const VideoFeeds = () => {
       ));
       setEditingFeed(null);
       setNewFeed({ name: '', location: '', streamUrl: '' });
+      console.log('Updated camera feed:', editingFeed.id);
     }
   };
 
   const handleDeleteFeed = (feedId: number) => {
     setFeeds(feeds.filter(feed => feed.id !== feedId));
+    console.log('Deleted camera feed:', feedId);
   };
 
   const resetForm = () => {
@@ -122,10 +207,10 @@ export const VideoFeeds = () => {
                   <Input
                     value={newFeed.streamUrl}
                     onChange={(e) => setNewFeed({ ...newFeed, streamUrl: e.target.value })}
-                    placeholder="rtmp://192.168.1.100:1935/live/stream1"
+                    placeholder="http://192.168.1.100:8080/video"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Supports RTMP, HTTP, and WebRTC streams
+                    Examples: http://ip:port/video, rtsp://ip:port/stream, or HLS streams
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -167,7 +252,7 @@ export const VideoFeeds = () => {
                   <Input
                     value={newFeed.streamUrl}
                     onChange={(e) => setNewFeed({ ...newFeed, streamUrl: e.target.value })}
-                    placeholder="rtmp://192.168.1.100:1935/live/stream1"
+                    placeholder="http://192.168.1.100:8080/video"
                   />
                 </div>
                 <div className="flex gap-2">
@@ -195,29 +280,8 @@ export const VideoFeeds = () => {
         {feeds.map((feed) => (
           <Card key={feed.id} className="google-shadow-lg overflow-hidden bg-card/95 backdrop-blur border-border/50">
             <div className="aspect-video bg-gradient-to-br from-muted/50 to-muted relative group cursor-pointer">
-              {feed.streamUrl ? (
-                <video
-                  className="w-full h-full object-cover"
-                  autoPlay
-                  muted
-                  loop
-                  onError={(e) => {
-                    console.log('Video stream error:', e);
-                    // Fallback to placeholder if stream fails
-                    (e.target as HTMLVideoElement).style.display = 'none';
-                  }}
-                >
-                  <source src={feed.streamUrl} type="video/mp4" />
-                  <source src={feed.streamUrl.replace('rtmp://', 'http://').replace(':1935', ':8080')} type="application/x-mpegURL" />
-                  Your browser does not support the video tag.
-                </video>
-              ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center">
-                  <Camera className="w-12 h-12 text-primary/60" />
-                </div>
-              )}
+              <VideoPlayer feed={feed} />
               
-              {/* Live indicator */}
               <div className="absolute top-3 left-3 flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${feed.status === 'live' ? 'bg-google-red animate-pulse' : 'bg-gray-500'}`}></div>
                 <span className="text-white text-xs font-medium bg-black/70 px-2 py-1 rounded backdrop-blur">
@@ -225,7 +289,6 @@ export const VideoFeeds = () => {
                 </span>
               </div>
 
-              {/* Alert indicator */}
               {feed.alerts > 0 && (
                 <div className="absolute top-3 right-3">
                   <div className="flex items-center gap-1 bg-destructive/90 text-destructive-foreground px-2 py-1 rounded text-xs font-medium backdrop-blur">
@@ -235,7 +298,6 @@ export const VideoFeeds = () => {
                 </div>
               )}
 
-              {/* Controls overlay */}
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <div className="flex items-center gap-2">
                   <Button
@@ -256,7 +318,6 @@ export const VideoFeeds = () => {
                 </div>
               </div>
 
-              {/* Feed info */}
               <div className="absolute bottom-3 left-3 right-3">
                 <div className="bg-black/70 backdrop-blur rounded p-2">
                   <h3 className="text-white font-medium text-sm">{feed.name}</h3>
