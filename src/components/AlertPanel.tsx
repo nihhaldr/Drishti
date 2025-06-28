@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { AlertTriangle, Clock, Users, MapPin } from 'lucide-react';
+import { AlertTriangle, Clock, Users, MapPin, Bell } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
