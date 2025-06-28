@@ -1,138 +1,382 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { Settings as SettingsIcon, Bell, Camera, Users, Shield, Map } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Settings as SettingsIcon, User, Bell, Shield, Camera, Wifi, Save, RefreshCw } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 export const Settings = () => {
+  const { user, signOut } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [settings, setSettings] = useState({
+    // General Settings
+    systemName: 'Drishti Command Center',
+    location: 'Event Venue',
+    timezone: 'UTC+05:30',
+    language: 'en',
+    
+    // Notifications
+    emailNotifications: true,
+    smsNotifications: false,
+    pushNotifications: true,
+    alertSounds: true,
+    
+    // Security
+    sessionTimeout: '30',
+    twoFactorAuth: false,
+    automaticLockout: true,
+    auditLogging: true,
+    
+    // Camera Settings
+    videoQuality: 'high',
+    recordingEnabled: true,
+    motionDetection: true,
+    nightVision: true,
+    
+    // System
+    autoBackup: true,
+    dataRetention: '90',
+    systemUpdates: true,
+    performanceMode: 'balanced'
+  });
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      toast.success('Settings saved successfully');
+    } catch (error) {
+      toast.error('Failed to save settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success('Signed out successfully');
+    } catch (error) {
+      toast.error('Failed to sign out');
+    }
+  };
+
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-          <SettingsIcon className="w-8 h-8 text-slate-400" />
-          System Settings
-        </h1>
-        <p className="text-slate-400">Configure Drishti platform settings</p>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border p-4 md:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-foreground">Settings</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Configure your Drishti system</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge className="bg-green-100 text-green-800 border-green-200">
+              System Online
+            </Badge>
+            <Button onClick={handleSave} disabled={loading} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              {loading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+              Save Changes
+            </Button>
+          </div>
+        </div>
       </div>
 
-      {/* System Status */}
-      <Card className="bg-slate-800 border-slate-700 p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">System Status</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="flex items-center justify-between p-3 bg-slate-700 rounded-lg">
-            <div className="flex items-center gap-3">
-              <Camera className="w-5 h-5 text-blue-400" />
-              <span className="text-white">Camera Network</span>
-            </div>
-            <Badge className="bg-green-600 text-white">Online</Badge>
-          </div>
-          
-          <div className="flex items-center justify-between p-3 bg-slate-700 rounded-lg">
-            <div className="flex items-center gap-3">
-              <Shield className="w-5 h-5 text-purple-400" />
-              <span className="text-white">AI Processing</span>
-            </div>
-            <Badge className="bg-green-600 text-white">Active</Badge>
-          </div>
-          
-          <div className="flex items-center justify-between p-3 bg-slate-700 rounded-lg">
-            <div className="flex items-center gap-3">
-              <Map className="w-5 h-5 text-red-400" />
-              <span className="text-white">Emergency Systems</span>
-            </div>
-            <Badge className="bg-green-600 text-white">Ready</Badge>
-          </div>
-        </div>
-      </Card>
+      <div className="p-4 md:p-6 max-w-6xl mx-auto">
+        <Tabs defaultValue="general" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 bg-muted">
+            <TabsTrigger value="general" className="flex items-center gap-2 text-xs md:text-sm">
+              <SettingsIcon className="w-4 h-4" />
+              <span className="hidden sm:inline">General</span>
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="flex items-center gap-2 text-xs md:text-sm">
+              <Bell className="w-4 h-4" />
+              <span className="hidden sm:inline">Alerts</span>
+            </TabsTrigger>
+            <TabsTrigger value="security" className="flex items-center gap-2 text-xs md:text-sm">
+              <Shield className="w-4 h-4" />
+              <span className="hidden sm:inline">Security</span>
+            </TabsTrigger>
+            <TabsTrigger value="cameras" className="flex items-center gap-2 text-xs md:text-sm">
+              <Camera className="w-4 h-4" />
+              <span className="hidden sm:inline">Cameras</span>
+            </TabsTrigger>
+            <TabsTrigger value="system" className="flex items-center gap-2 text-xs md:text-sm">
+              <Wifi className="w-4 h-4" />
+              <span className="hidden sm:inline">System</span>
+            </TabsTrigger>
+          </TabsList>
 
-      {/* Alert Settings */}
-      <Card className="bg-slate-800 border-slate-700 p-6">
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Bell className="w-5 h-5" />
-          Alert Configuration
-        </h2>
-        <div className="space-y-4">
-          {[
-            { name: 'High Crowd Density Threshold', value: '85%', description: 'Alert when crowd reaches this capacity' },
-            { name: 'Emergency Response Time', value: '2 minutes', description: 'Maximum time before escalation' },
-            { name: 'AI Confidence Threshold', value: '90%', description: 'Minimum confidence for automated alerts' },
-            { name: 'Social Media Monitoring', value: 'Enabled', description: 'Real-time sentiment analysis' }
-          ].map((setting, index) => (
-            <div key={index} className="flex items-center justify-between p-4 bg-slate-700 rounded-lg">
-              <div>
-                <h3 className="font-medium text-white">{setting.name}</h3>
-                <p className="text-sm text-slate-400">{setting.description}</p>
+          {/* General Settings */}
+          <TabsContent value="general" className="space-y-6">
+            <Card className="p-4 md:p-6 bg-card border-border">
+              <h3 className="text-lg font-semibold text-foreground mb-4">General Configuration</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="systemName">System Name</Label>
+                  <Input
+                    id="systemName"
+                    value={settings.systemName}
+                    onChange={(e) => setSettings(prev => ({ ...prev, systemName: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <Input
+                    id="location"
+                    value={settings.location}
+                    onChange={(e) => setSettings(prev => ({ ...prev, location: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="timezone">Timezone</Label>
+                  <Select value={settings.timezone} onValueChange={(value) => 
+                    setSettings(prev => ({ ...prev, timezone: value }))
+                  }>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="UTC+05:30">IST (UTC+05:30)</SelectItem>
+                      <SelectItem value="UTC+00:00">UTC (UTC+00:00)</SelectItem>
+                      <SelectItem value="UTC-05:00">EST (UTC-05:00)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="language">Language</Label>
+                  <Select value={settings.language} onValueChange={(value) => 
+                    setSettings(prev => ({ ...prev, language: value }))
+                  }>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="hi">Hindi</SelectItem>
+                      <SelectItem value="es">Spanish</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-blue-400 font-medium">{setting.value}</span>
-                <Button variant="outline" size="sm" className="border-slate-600 text-slate-300">
-                  Edit
-                </Button>
+            </Card>
+
+            {/* User Profile */}
+            <Card className="p-4 md:p-6 bg-card border-border">
+              <h3 className="text-lg font-semibold text-foreground mb-4">User Profile</h3>
+              <div className="flex flex-col sm:flex-row items-start gap-4">
+                <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center">
+                  <User className="w-8 h-8 text-primary-foreground" />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <div>
+                    <Label>Email</Label>
+                    <p className="text-foreground">{user?.email || 'Not signed in'}</p>
+                  </div>
+                  <div>
+                    <Label>Role</Label>
+                    <Badge className="bg-blue-100 text-blue-800 border-blue-200">System Administrator</Badge>
+                  </div>
+                  <Button variant="outline" onClick={handleSignOut} className="border-border hover:bg-accent">
+                    Sign Out
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </Card>
+            </Card>
+          </TabsContent>
 
-      {/* Integration Settings */}
-      <Card className="bg-slate-800 border-slate-700 p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">External Integrations</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[
-            { name: 'Google Maps API', status: 'Connected', icon: Map },
-            { name: 'Firebase Database', status: 'Connected', icon: Shield },
-            { name: 'Vertex AI', status: 'Connected', icon: Users },
-            { name: 'Emergency Services', status: 'Pending', icon: Bell }
-          ].map((integration, index) => (
-            <div key={index} className="flex items-center justify-between p-4 bg-slate-700 rounded-lg">
-              <div className="flex items-center gap-3">
-                <integration.icon className="w-5 h-5 text-blue-400" />
-                <span className="text-white">{integration.name}</span>
+          {/* Notifications */}
+          <TabsContent value="notifications" className="space-y-6">
+            <Card className="p-4 md:p-6 bg-card border-border">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Alert Preferences</h3>
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <Label>Email Notifications</Label>
+                    <p className="text-sm text-muted-foreground">Receive alerts via email</p>
+                  </div>
+                  <Switch
+                    checked={settings.emailNotifications}
+                    onCheckedChange={(value) => setSettings(prev => ({ ...prev, emailNotifications: value }))}
+                  />
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <Label>SMS Notifications</Label>
+                    <p className="text-sm text-muted-foreground">Receive critical alerts via SMS</p>
+                  </div>
+                  <Switch
+                    checked={settings.smsNotifications}
+                    onCheckedChange={(value) => setSettings(prev => ({ ...prev, smsNotifications: value }))}
+                  />
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <Label>Push Notifications</Label>
+                    <p className="text-sm text-muted-foreground">Browser push notifications</p>
+                  </div>
+                  <Switch
+                    checked={settings.pushNotifications}
+                    onCheckedChange={(value) => setSettings(prev => ({ ...prev, pushNotifications: value }))}
+                  />
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <Label>Alert Sounds</Label>
+                    <p className="text-sm text-muted-foreground">Play audio alerts</p>
+                  </div>
+                  <Switch
+                    checked={settings.alertSounds}
+                    onCheckedChange={(value) => setSettings(prev => ({ ...prev, alertSounds: value }))}
+                  />
+                </div>
               </div>
-              <Badge className={integration.status === 'Connected' ? 'bg-green-600' : 'bg-yellow-600'}>
-                {integration.status}
-              </Badge>
-            </div>
-          ))}
-        </div>
-      </Card>
+            </Card>
+          </TabsContent>
 
-      {/* User Management */}
-      <Card className="bg-slate-800 border-slate-700 p-6">
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Users className="w-5 h-5" />
-          User Management
-        </h2>
-        <div className="flex justify-between items-center">
-          <div>
-            <p className="text-slate-300">Manage user access and permissions</p>
-            <p className="text-sm text-slate-500">Currently 12 active users</p>
-          </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            Manage Users
-          </Button>
-        </div>
-      </Card>
+          {/* Security */}
+          <TabsContent value="security" className="space-y-6">
+            <Card className="p-4 md:p-6 bg-card border-border">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Security Settings</h3>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
+                  <Select value={settings.sessionTimeout} onValueChange={(value) => 
+                    setSettings(prev => ({ ...prev, sessionTimeout: value }))
+                  }>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15">15 minutes</SelectItem>
+                      <SelectItem value="30">30 minutes</SelectItem>
+                      <SelectItem value="60">1 hour</SelectItem>
+                      <SelectItem value="120">2 hours</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <Label>Two-Factor Authentication</Label>
+                    <p className="text-sm text-muted-foreground">Add extra security to your account</p>
+                  </div>
+                  <Switch
+                    checked={settings.twoFactorAuth}
+                    onCheckedChange={(value) => setSettings(prev => ({ ...prev, twoFactorAuth: value }))}
+                  />
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <Label>Automatic Lockout</Label>
+                    <p className="text-sm text-muted-foreground">Lock system after failed attempts</p>
+                  </div>
+                  <Switch
+                    checked={settings.automaticLockout}
+                    onCheckedChange={(value) => setSettings(prev => ({ ...prev, automaticLockout: value }))}
+                  />
+                </div>
+              </div>
+            </Card>
+          </TabsContent>
 
-      {/* Data & Privacy */}
-      <Card className="bg-slate-800 border-slate-700 p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Data & Privacy</h2>
-        <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="text-slate-300">Data Retention Period</span>
-            <span className="text-blue-400">30 days</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-slate-300">Encryption Status</span>
-            <Badge className="bg-green-600 text-white">Enabled</Badge>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-slate-300">Backup Frequency</span>
-            <span className="text-blue-400">Every 6 hours</span>
-          </div>
-        </div>
-      </Card>
+          {/* Cameras */}
+          <TabsContent value="cameras" className="space-y-6">
+            <Card className="p-4 md:p-6 bg-card border-border">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Camera Configuration</h3>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="videoQuality">Video Quality</Label>
+                  <Select value={settings.videoQuality} onValueChange={(value) => 
+                    setSettings(prev => ({ ...prev, videoQuality: value }))
+                  }>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low (720p)</SelectItem>
+                      <SelectItem value="medium">Medium (1080p)</SelectItem>
+                      <SelectItem value="high">High (4K)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <Label>Recording Enabled</Label>
+                    <p className="text-sm text-muted-foreground">Save video recordings</p>
+                  </div>
+                  <Switch
+                    checked={settings.recordingEnabled}
+                    onCheckedChange={(value) => setSettings(prev => ({ ...prev, recordingEnabled: value }))}
+                  />
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <Label>Motion Detection</Label>
+                    <p className="text-sm text-muted-foreground">Detect movement in camera feeds</p>
+                  </div>
+                  <Switch
+                    checked={settings.motionDetection}
+                    onCheckedChange={(value) => setSettings(prev => ({ ...prev, motionDetection: value }))}
+                  />
+                </div>
+              </div>
+            </Card>
+          </TabsContent>
+
+          {/* System */}
+          <TabsContent value="system" className="space-y-6">
+            <Card className="p-4 md:p-6 bg-card border-border">
+              <h3 className="text-lg font-semibold text-foreground mb-4">System Configuration</h3>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="dataRetention">Data Retention (days)</Label>
+                  <Select value={settings.dataRetention} onValueChange={(value) => 
+                    setSettings(prev => ({ ...prev, dataRetention: value }))
+                  }>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="30">30 days</SelectItem>
+                      <SelectItem value="60">60 days</SelectItem>
+                      <SelectItem value="90">90 days</SelectItem>
+                      <SelectItem value="365">1 year</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <Label>Automatic Backup</Label>
+                    <p className="text-sm text-muted-foreground">Daily system backups</p>
+                  </div>
+                  <Switch
+                    checked={settings.autoBackup}
+                    onCheckedChange={(value) => setSettings(prev => ({ ...prev, autoBackup: value }))}
+                  />
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <Label>System Updates</Label>
+                    <p className="text-sm text-muted-foreground">Automatic updates</p>
+                  </div>
+                  <Switch
+                    checked={settings.systemUpdates}
+                    onCheckedChange={(value) => setSettings(prev => ({ ...prev, systemUpdates: value }))}
+                  />
+                </div>
+              </div>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 };
