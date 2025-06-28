@@ -6,7 +6,13 @@ import {
   Search, 
   Settings, 
   Bell,
-  Map
+  Map,
+  TrendingUp,
+  Brain,
+  Eye,
+  UserSearch,
+  MessageSquare,
+  Smartphone
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +28,11 @@ const menuItems = [
   { id: 'feeds', label: 'Video Feeds', icon: Camera },
   { id: 'crowd', label: 'Crowd Analysis', icon: Users },
   { id: 'incidents', label: 'Incidents', icon: Bell },
+  { id: 'bottleneck', label: 'Bottleneck Analysis', icon: TrendingUp },
+  { id: 'summaries', label: 'AI Summaries', icon: MessageSquare },
+  { id: 'anomaly', label: 'Anomaly Detection', icon: Eye },
+  { id: 'lost-found', label: 'Lost & Found', icon: UserSearch },
+  { id: 'mobile', label: 'Mobile Staff App', icon: Smartphone },
   { id: 'search', label: 'AI Search', icon: Search },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
@@ -55,7 +66,7 @@ export const Sidebar = ({ selectedView, setSelectedView, collapsed, setCollapsed
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-2">
+      <nav className="flex-1 p-2 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -63,7 +74,7 @@ export const Sidebar = ({ selectedView, setSelectedView, collapsed, setCollapsed
               key={item.id}
               onClick={() => setSelectedView(item.id)}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-3 rounded-lg mb-1 transition-all duration-200",
+                "w-full flex items-center gap-3 px-3 py-3 rounded-lg mb-1 transition-all duration-200 text-left",
                 selectedView === item.id
                   ? "bg-google-blue text-white shadow-md"
                   : "text-gray-600 hover:bg-gray-50 hover:text-google-blue"
