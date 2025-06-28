@@ -69,10 +69,10 @@ export const AlertPanel = () => {
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'critical': return 'bg-red-500';
+      case 'critical': return 'bg-google-red';
       case 'high': return 'bg-orange-500';
-      case 'medium': return 'bg-yellow-500';
-      case 'low': return 'bg-blue-500';
+      case 'medium': return 'bg-google-yellow';
+      case 'low': return 'bg-google-blue';
       default: return 'bg-gray-500';
     }
   };
@@ -91,52 +91,52 @@ export const AlertPanel = () => {
 
   if (loading) {
     return (
-      <div className="w-80 bg-slate-800 border-l border-slate-700 p-4">
-        <div className="text-white">Loading alerts...</div>
+      <div className="w-80 bg-white border-l border-gray-200 p-4 shadow-sm">
+        <div className="text-gray-600">Loading alerts...</div>
       </div>
     );
   }
 
   return (
-    <div className="w-80 bg-slate-800 border-l border-slate-700 p-4 overflow-y-auto">
+    <div className="w-80 bg-white border-l border-gray-200 p-4 overflow-y-auto shadow-sm">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-          <Bell className="w-5 h-5" />
+        <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+          <Bell className="w-5 h-5 text-google-blue" />
           Live Alerts
         </h2>
-        <Badge variant="destructive" className="bg-red-600">
+        <Badge className="bg-google-red text-white">
           {alerts.length}
         </Badge>
       </div>
 
       <div className="space-y-3">
         {alerts.length === 0 ? (
-          <Card className="bg-slate-700 border-slate-600 p-4">
-            <div className="text-center text-slate-400">
+          <Card className="bg-gray-50 border-gray-200 p-4">
+            <div className="text-center text-gray-500">
               <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p>No active alerts</p>
             </div>
           </Card>
         ) : (
           alerts.map((alert) => (
-            <Card key={alert.id} className="bg-slate-700 border-slate-600 p-3">
+            <Card key={alert.id} className="bg-gray-50 border-gray-200 p-3 hover:shadow-md transition-shadow">
               <div className="flex items-start gap-3">
                 <div className={`w-2 h-2 rounded-full mt-2 ${getSeverityColor(alert.severity)}`} />
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-sm font-medium text-white truncate">
+                    <h3 className="text-sm font-medium text-gray-800 truncate">
                       {alert.title}
                     </h3>
                   </div>
                   
                   {alert.message && (
-                    <p className="text-xs text-slate-300 mb-2 line-clamp-2">
+                    <p className="text-xs text-gray-600 mb-2 line-clamp-2">
                       {alert.message}
                     </p>
                   )}
                   
-                  <div className="flex items-center justify-between text-xs text-slate-400 mb-3">
+                  <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
                     {alert.location_name && (
                       <div className="flex items-center gap-1">
                         <MapPin className="w-3 h-3" />
@@ -154,7 +154,7 @@ export const AlertPanel = () => {
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        className="text-xs h-6 border-slate-600 text-slate-300 hover:text-white"
+                        className="text-xs h-6 border-gray-300 text-gray-600 hover:text-google-blue hover:border-google-blue"
                         onClick={() => handleAcknowledge(alert.id)}
                       >
                         Acknowledge
@@ -163,7 +163,7 @@ export const AlertPanel = () => {
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="text-xs h-6 border-slate-600 text-slate-300 hover:text-white"
+                      className="text-xs h-6 border-gray-300 text-gray-600 hover:text-google-green hover:border-google-green"
                       onClick={() => handleResolve(alert.id)}
                     >
                       Resolve
@@ -177,7 +177,7 @@ export const AlertPanel = () => {
       </div>
 
       <Button 
-        className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
+        className="w-full mt-4 bg-google-blue hover:bg-blue-600 text-white shadow-md"
         onClick={loadAlerts}
       >
         Refresh Alerts

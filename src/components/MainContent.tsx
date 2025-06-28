@@ -32,7 +32,7 @@ export const MainContent = ({ selectedView }: MainContentProps) => {
   };
 
   return (
-    <div className="flex-1 overflow-auto bg-slate-900">
+    <div className="flex-1 overflow-auto bg-gray-50">
       {renderView()}
     </div>
   );
