@@ -21,6 +21,20 @@ class LostAndFoundService {
   private cache: Map<string, LostPerson> = new Map();
   private lastFetch: number = 0;
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  private observers: Set<() => void> = new Set();
+
+  // Subscribe to cache updates
+  subscribe(callback: () => void) {
+    this.observers.add(callback);
+    return () => {
+      this.observers.delete(callback);
+    };
+  }
+
+  // Notify observers of cache updates
+  private notifyObservers() {
+    this.observers.forEach(callback => callback());
+  }
 
   async getAllLostPersons(): Promise<LostPerson[]> {
     const now = Date.now();
@@ -51,7 +65,7 @@ class LostAndFoundService {
           photo_url: person.photo_url || '/placeholder.svg',
           contact_name: person.contact_name || '',
           contact_phone: person.contact_phone || '',
-          status: person.status || 'missing',
+          status: (person.status as 'missing' | 'found' | 'investigating') || 'missing',
           ai_match_confidence: person.ai_match_confidence,
           created_at: person.created_at,
           updated_at: person.updated_at
@@ -60,6 +74,7 @@ class LostAndFoundService {
       });
 
       this.lastFetch = now;
+      this.notifyObservers();
       return Array.from(this.cache.values());
     } catch (error) {
       console.error('Error fetching lost persons:', error);
@@ -97,7 +112,7 @@ class LostAndFoundService {
         photo_url: data.photo_url || '/placeholder.svg',
         contact_name: data.contact_name || '',
         contact_phone: data.contact_phone || '',
-        status: data.status || 'missing',
+        status: (data.status as 'missing' | 'found' | 'investigating') || 'missing',
         ai_match_confidence: data.ai_match_confidence,
         created_at: data.created_at,
         updated_at: data.updated_at
@@ -105,6 +120,7 @@ class LostAndFoundService {
 
       // Update cache
       this.cache.set(newPerson.id, newPerson);
+      this.notifyObservers();
       return newPerson;
     } catch (error) {
       console.error('Error creating lost person:', error);
@@ -124,12 +140,13 @@ class LostAndFoundService {
 
       if (error) throw error;
 
-      // Update cache
+      // Update cache immediately
       const cachedPerson = this.cache.get(id);
       if (cachedPerson) {
         cachedPerson.status = status;
         cachedPerson.updated_at = new Date().toISOString();
         this.cache.set(id, cachedPerson);
+        this.notifyObservers();
       }
 
       return true;
@@ -150,6 +167,7 @@ class LostAndFoundService {
 
       // Remove from cache
       this.cache.delete(id);
+      this.notifyObservers();
       return true;
     } catch (error) {
       console.error('Error deleting lost person:', error);
@@ -180,9 +198,20 @@ class LostAndFoundService {
     }
   }
 
+  // Get cached person by ID
+  getCachedPerson(id: string): LostPerson | undefined {
+    return this.cache.get(id);
+  }
+
+  // Get all cached persons
+  getCachedPersons(): LostPerson[] {
+    return Array.from(this.cache.values());
+  }
+
   clearCache(): void {
     this.cache.clear();
     this.lastFetch = 0;
+    this.notifyObservers();
   }
 }
 
