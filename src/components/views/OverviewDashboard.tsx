@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Users, Camera, AlertTriangle, MapPin } from 'lucide-react';
