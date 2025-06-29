@@ -1,74 +1,186 @@
-import React from 'react';
-import { Card } from '@/components/ui/card';
-import { Users, Camera, AlertTriangle, MapPin } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { LiveEventMap } from '@/components/LiveEventMap';
 
-const stats = [
-  { label: 'Total Attendees', value: '47,832', change: '+2.3%', icon: Users, color: 'text-green-600' },
-  { label: 'Active Cameras', value: '127', change: '98%', icon: Camera, color: 'text-blue-600' },
-  { label: 'Active Incidents', value: '3', change: '-1', icon: AlertTriangle, color: 'text-yellow-600' },
-  { label: 'Response Units', value: '24', change: '100%', icon: MapPin, color: 'text-purple-600' }
-];
+import React, { useState, useEffect } from 'react';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Users, AlertTriangle, Camera, Clock, MapPin, TrendingUp } from 'lucide-react';
+import { crowdDataService, LocationData } from '@/services/crowdDataService';
 
 export const OverviewDashboard = () => {
+  const [locations, setLocations] = useState<LocationData[]>([]);
+
+  useEffect(() => {
+    // Initialize with shared data
+    setLocations(crowdDataService.getLocations());
+    
+    // Subscribe to changes
+    const unsubscribe = crowdDataService.subscribe((newLocations) => {
+      setLocations(newLocations);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const getDensityColor = (density: number) => {
+    if (density >= 80) return 'bg-red-500';
+    if (density >= 60) return 'bg-yellow-500';
+    return 'bg-green-500';
+  };
+
+  const totalPeople = locations.reduce((sum, loc) => sum + loc.current, 0);
+  const highDensityCount = locations.filter(loc => loc.density >= 80).length;
+  const avgDensity = Math.round(locations.reduce((sum, loc) => sum + loc.density, 0) / locations.length);
+
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Command Overview</h1>
-          <p className="text-gray-600">Real-time situational awareness dashboard</p>
+    <div className="min-h-screen bg-background p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
+            Command Center Overview
+          </h1>
+          <p className="text-muted-foreground">
+            Real-time monitoring and incident management dashboard
+          </p>
         </div>
-        <Badge variant="outline" className="border-green-500 text-green-600 bg-green-50">
-          All Systems Operational
-        </Badge>
-      </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={index} className="bg-white border-gray-200 p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm">{stat.label}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
-                  <p className={`text-sm mt-1 ${stat.color}`}>{stat.change}</p>
-                </div>
-                <Icon className={`w-8 h-8 ${stat.color}`} />
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Live Event Map */}
-      <LiveEventMap />
-
-      {/* Real-time Feeds */}
-      <Card className="bg-white border-gray-200 p-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Camera className="w-5 h-5" />
-          Priority Camera Feeds
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {['Main Stage', 'Gate 3', 'Food Court'].map((location, index) => (
-            <div key={index} className="bg-gray-100 rounded-lg p-4 aspect-video relative">
-              <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
-                LIVE
-              </div>
-              <div className="absolute bottom-2 left-2 text-gray-900 text-sm font-medium">
-                {location}
-              </div>
-              <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 rounded flex items-center justify-center">
-                <Camera className="w-8 h-8 text-gray-600" />
+        {/* Key Metrics */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+          <Card className="p-4 md:p-6 bg-card border-border">
+            <div className="flex items-center gap-3">
+              <Users className="w-8 h-8 text-primary" />
+              <div>
+                <p className="text-sm text-muted-foreground">Total People</p>
+                <p className="text-2xl font-bold text-foreground">{totalPeople.toLocaleString()}</p>
               </div>
             </div>
-          ))}
+          </Card>
+
+          <Card className="p-4 md:p-6 bg-card border-border">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-8 h-8 text-red-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Active Incidents</p>
+                <p className="text-2xl font-bold text-foreground">3</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-4 md:p-6 bg-card border-border">
+            <div className="flex items-center gap-3">
+              <Camera className="w-8 h-8 text-blue-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Active Cameras</p>
+                <p className="text-2xl font-bold text-foreground">12</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-4 md:p-6 bg-card border-border">
+            <div className="flex items-center gap-3">
+              <TrendingUp className="w-8 h-8 text-green-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Avg Density</p>
+                <p className="text-2xl font-bold text-foreground">{avgDensity}%</p>
+              </div>
+            </div>
+          </Card>
         </div>
-      </Card>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Recent Incidents */}
+          <Card className="lg:col-span-2 p-6 bg-card border-border">
+            <h3 className="text-xl font-semibold text-foreground mb-4">Recent Incidents</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-500" />
+                  <div>
+                    <p className="font-medium text-foreground">Medical Emergency - Gate 3</p>
+                    <p className="text-sm text-muted-foreground">Person collapsed near entrance</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-red-500 text-white">Critical</Badge>
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">10m ago</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Users className="w-5 h-5 text-yellow-500" />
+                  <div>
+                    <p className="font-medium text-foreground">Crowd Density Alert - Main Stage</p>
+                    <p className="text-sm text-muted-foreground">Overcrowding detected in front sections</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-yellow-500 text-white">High</Badge>
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">25m ago</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <MapPin className="w-5 h-5 text-orange-500" />
+                  <div>
+                    <p className="font-medium text-foreground">Lost Person - Child</p>
+                    <p className="text-sm text-muted-foreground">8-year-old missing near food court</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-orange-500 text-white">High</Badge>
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">45m ago</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Crowd Density Status */}
+          <Card className="p-6 bg-card border-border">
+            <h3 className="text-xl font-semibold text-foreground mb-4">Crowd Density Status</h3>
+            <div className="space-y-4">
+              {locations.slice(0, 6).map((location, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-foreground">{location.name}</p>
+                    <p className="text-sm text-muted-foreground">{location.current}/{location.capacity}</p>
+                  </div>
+                  <Badge className={`${getDensityColor(location.density)} text-white`}>
+                    {location.density}%
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <Card className="p-6 bg-card border-border">
+          <h3 className="text-xl font-semibold text-foreground mb-4">System Status</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              <span className="text-sm text-foreground">All Systems Operational</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              <span className="text-sm text-foreground">Network Connected</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+              <span className="text-sm text-foreground">{highDensityCount} High Density Areas</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              <span className="text-sm text-foreground">Emergency Services Ready</span>
+            </div>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 };

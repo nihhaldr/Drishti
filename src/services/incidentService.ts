@@ -35,53 +35,118 @@ export interface CreateIncidentRequest {
   assigned_to?: string;
 }
 
-export const incidentService = {
-  async getAll(): Promise<Incident[]> {
-    const { data, error } = await supabase
-      .from('incidents')
-      .select('*')
-      .order('created_at', { ascending: false });
+class IncidentService {
+  private static instance: IncidentService;
+  private incidents: Incident[] = [];
+  private subscribers: ((incidents: Incident[]) => void)[] = [];
 
-    if (error) throw error;
-    return data || [];
-  },
+  public static getInstance(): IncidentService {
+    if (!IncidentService.instance) {
+      IncidentService.instance = new IncidentService();
+    }
+    return IncidentService.instance;
+  }
+
+  async getAll(): Promise<Incident[]> {
+    try {
+      const { data, error } = await supabase
+        .from('incidents')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      this.incidents = data || [];
+      this.notifySubscribers();
+      return this.incidents;
+    } catch (error) {
+      console.error('Error fetching incidents:', error);
+      return this.incidents;
+    }
+  }
 
   async create(incident: CreateIncidentRequest): Promise<Incident> {
-    const user = (await supabase.auth.getUser()).data.user;
-    const { data, error } = await supabase
-      .from('incidents')
-      .insert([{
-        ...incident,
-        reported_by: user?.id,
-        status: 'reported' as IncidentStatus
-      }])
-      .select()
-      .single();
+    try {
+      const user = (await supabase.auth.getUser()).data.user;
+      const { data, error } = await supabase
+        .from('incidents')
+        .insert([{
+          ...incident,
+          reported_by: user?.id,
+          status: 'reported' as IncidentStatus
+        }])
+        .select()
+        .single();
 
-    if (error) throw error;
-    return data;
-  },
+      if (error) throw error;
+      
+      // Update local cache
+      this.incidents = [data, ...this.incidents];
+      this.notifySubscribers();
+      return data;
+    } catch (error) {
+      console.error('Error creating incident:', error);
+      throw error;
+    }
+  }
 
   async update(id: string, updates: Partial<Incident>): Promise<Incident> {
-    const { data, error } = await supabase
-      .from('incidents')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('incidents')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
 
-    if (error) throw error;
-    return data;
-  },
+      if (error) throw error;
+      
+      // Update local cache
+      this.incidents = this.incidents.map(inc => 
+        inc.id === id ? { ...inc, ...data } : inc
+      );
+      this.notifySubscribers();
+      return data;
+    } catch (error) {
+      console.error('Error updating incident:', error);
+      throw error;
+    }
+  }
 
   async getByStatus(status: IncidentStatus): Promise<Incident[]> {
-    const { data, error } = await supabase
-      .from('incidents')
-      .select('*')
-      .eq('status', status)
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('incidents')
+        .select('*')
+        .eq('status', status)
+        .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return data || [];
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching incidents by status:', error);
+      return [];
+    }
   }
-};
+
+  public subscribe(callback: (incidents: Incident[]) => void): () => void {
+    this.subscribers.push(callback);
+    return () => {
+      this.subscribers = this.subscribers.filter(sub => sub !== callback);
+    };
+  }
+
+  private notifySubscribers(): void {
+    this.subscribers.forEach(callback => callback([...this.incidents]));
+  }
+
+  // Get cached incidents without API call
+  public getCachedIncidents(): Incident[] {
+    return [...this.incidents];
+  }
+}
+
+export const incidentService = IncidentService.getInstance();

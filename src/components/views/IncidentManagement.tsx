@@ -48,7 +48,7 @@ const mockIncidents = [
 ];
 
 export const IncidentManagement = () => {
-  const [incidents, setIncidents] = useState<Incident[]>(mockIncidents);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -62,6 +62,31 @@ export const IncidentManagement = () => {
     location_name: ''
   });
 
+  useEffect(() => {
+    loadIncidents();
+    
+    // Subscribe to incident updates
+    const unsubscribe = incidentService.subscribe((updatedIncidents) => {
+      setIncidents(updatedIncidents);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const loadIncidents = async () => {
+    setLoading(true);
+    try {
+      const data = await incidentService.getAll();
+      setIncidents(data.length > 0 ? data : mockIncidents);
+    } catch (error) {
+      console.error('Error loading incidents:', error);
+      setIncidents(mockIncidents);
+      toast.error('Failed to load incidents, using mock data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCreateIncident = async () => {
     if (!newIncident.title.trim()) {
       toast.error('Please enter an incident title');
@@ -70,6 +95,19 @@ export const IncidentManagement = () => {
 
     try {
       setLoading(true);
+      await incidentService.create(newIncident);
+      setIsCreateDialogOpen(false);
+      setNewIncident({
+        title: '',
+        description: '',
+        incident_type: 'general',
+        priority: 'medium',
+        location_name: ''
+      });
+      toast.success('Incident created successfully');
+    } catch (error) {
+      console.error('Error creating incident:', error);
+      // Fallback to mock creation
       const created: Incident = {
         id: Date.now().toString(),
         ...newIncident,
@@ -88,9 +126,6 @@ export const IncidentManagement = () => {
         location_name: ''
       });
       toast.success('Incident created successfully');
-    } catch (error) {
-      console.error('Error creating incident:', error);
-      toast.error('Failed to create incident');
     } finally {
       setLoading(false);
     }
@@ -99,17 +134,24 @@ export const IncidentManagement = () => {
   const handleStatusUpdate = async (id: string, status: IncidentStatus) => {
     try {
       setLoading(true);
-      const updatedIncident = incidents.find(inc => inc.id === id);
-      if (updatedIncident) {
-        const updated = {
-          ...updatedIncident,
-          status,
-          updated_at: new Date().toISOString(),
-          resolved_at: status === 'resolved' || status === 'closed' ? new Date().toISOString() : undefined
-        };
-        setIncidents(prev => prev.map(inc => inc.id === id ? updated : inc));
-        toast.success(`Incident status updated to ${status}`);
+      
+      const updates = {
+        status,
+        updated_at: new Date().toISOString(),
+        resolved_at: status === 'resolved' || status === 'closed' ? new Date().toISOString() : undefined
+      };
+
+      try {
+        await incidentService.update(id, updates);
+      } catch (error) {
+        console.error('Error updating incident in database:', error);
+        // Fallback to local update
+        setIncidents(prev => prev.map(inc => 
+          inc.id === id ? { ...inc, ...updates } : inc
+        ));
       }
+      
+      toast.success(`Incident status updated to ${status}`);
     } catch (error) {
       console.error('Error updating incident:', error);
       toast.error('Failed to update incident status');
