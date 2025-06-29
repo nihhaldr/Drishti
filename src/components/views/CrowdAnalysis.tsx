@@ -18,17 +18,36 @@ const mockLocations = [
 
 export const CrowdAnalysis = () => {
   const [metrics, setMetrics] = useState<CrowdMetric[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [locations, setLocations] = useState(mockLocations);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   useEffect(() => {
     loadMetrics();
   }, []);
 
   const loadMetrics = async () => {
+    setLoading(true);
     try {
       const data = await crowdService.getLatestMetrics();
       setMetrics(data);
+      
+      // Update locations with real data if available
+      setLocations(prev => prev.map(loc => {
+        const metric = data.find(m => m.location_name === loc.name);
+        if (metric) {
+          return {
+            ...loc,
+            density: metric.density_percentage || loc.density,
+            current: Math.floor((metric.density_percentage || loc.density) * loc.capacity / 100)
+          };
+        }
+        return loc;
+      }));
+      
+      setLastRefresh(new Date());
+      toast.success('Crowd data refreshed successfully');
     } catch (error) {
       console.error('Error loading crowd metrics:', error);
       toast.error('Failed to load crowd data');
@@ -49,16 +68,29 @@ export const CrowdAnalysis = () => {
     return <div className="w-4 h-4 bg-gray-400 rounded-full" />;
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="text-center">
-          <RefreshCw className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-foreground">Loading crowd analysis...</p>
-        </div>
-      </div>
-    );
-  }
+  const exportData = () => {
+    const csvData = locations.map(loc => ({
+      Location: loc.name,
+      Density: `${loc.density}%`,
+      Current: loc.current,
+      Capacity: loc.capacity,
+      Trend: loc.trend
+    }));
+    
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + "Location,Density,Current,Capacity,Trend\n"
+      + csvData.map(row => Object.values(row).join(",")).join("\n");
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `crowd_analysis_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success('Data exported successfully');
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -67,14 +99,29 @@ export const CrowdAnalysis = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-xl md:text-2xl font-bold text-foreground">Crowd Analysis</h1>
-            <p className="text-sm md:text-base text-muted-foreground">Real-time crowd density monitoring</p>
+            <p className="text-sm md:text-base text-muted-foreground">
+              Real-time crowd density monitoring
+              {lastRefresh && (
+                <span className="block text-xs opacity-75">
+                  Last updated: {lastRefresh.toLocaleTimeString()}
+                </span>
+              )}
+            </p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={loadMetrics} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
+            <Button 
+              onClick={loadMetrics} 
+              disabled={loading}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              {loading ? 'Refreshing...' : 'Refresh'}
             </Button>
-            <Button variant="outline" className="border-border hover:bg-accent">
+            <Button 
+              onClick={exportData}
+              variant="outline" 
+              className="border-border hover:bg-accent"
+            >
               Export Data
             </Button>
           </div>
@@ -89,7 +136,9 @@ export const CrowdAnalysis = () => {
               <Users className="w-5 h-5 md:w-6 md:h-6 text-primary" />
               <div>
                 <p className="text-xs md:text-sm text-muted-foreground">Total People</p>
-                <p className="text-lg md:text-2xl font-bold text-foreground">1,124</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground">
+                  {locations.reduce((sum, loc) => sum + loc.current, 0).toLocaleString()}
+                </p>
               </div>
             </div>
           </Card>
@@ -99,7 +148,9 @@ export const CrowdAnalysis = () => {
               <AlertTriangle className="w-5 h-5 md:w-6 md:h-6 text-yellow-500" />
               <div>
                 <p className="text-xs md:text-sm text-muted-foreground">High Density</p>
-                <p className="text-lg md:text-2xl font-bold text-foreground">3</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground">
+                  {locations.filter(loc => loc.density >= 80).length}
+                </p>
               </div>
             </div>
           </Card>
@@ -109,7 +160,7 @@ export const CrowdAnalysis = () => {
               <MapPin className="w-5 h-5 md:w-6 md:h-6 text-green-500" />
               <div>
                 <p className="text-xs md:text-sm text-muted-foreground">Locations</p>
-                <p className="text-lg md:text-2xl font-bold text-foreground">{mockLocations.length}</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground">{locations.length}</p>
               </div>
             </div>
           </Card>
@@ -119,7 +170,9 @@ export const CrowdAnalysis = () => {
               <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-blue-500" />
               <div>
                 <p className="text-xs md:text-sm text-muted-foreground">Avg Density</p>
-                <p className="text-lg md:text-2xl font-bold text-foreground">52%</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground">
+                  {Math.round(locations.reduce((sum, loc) => sum + loc.density, 0) / locations.length)}%
+                </p>
               </div>
             </div>
           </Card>
@@ -127,7 +180,7 @@ export const CrowdAnalysis = () => {
 
         {/* Location Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {mockLocations.map((location, index) => (
+          {locations.map((location, index) => (
             <Card 
               key={index} 
               className={`p-4 md:p-6 bg-card border-border cursor-pointer transition-all hover:shadow-lg ${
