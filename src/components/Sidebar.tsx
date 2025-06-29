@@ -22,7 +22,7 @@ interface SidebarProps {
 }
 
 const menuItems = [
-  { id: 'overview', label: 'Overview', icon: Map },
+  { id: 'overview', label: 'Live Event Map', icon: Map },
   { id: 'feeds', label: 'Video Feeds', icon: Camera },
   { id: 'crowd', label: 'Crowd Analysis', icon: Users },
   { id: 'incidents', label: 'Incidents', icon: Bell },
