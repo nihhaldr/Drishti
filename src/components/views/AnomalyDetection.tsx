@@ -37,7 +37,7 @@ export const AnomalyDetection = () => {
         <Card className="bg-white border border-gray-200 rounded-lg shadow-sm">
           <div className="p-8">
             <div className="flex items-center gap-3 mb-2">
-              <Eye className="w-6 h-6 text-green-600" />
+              <Eye className="w-6 h-6 text-primary" />
               <h1 className="text-2xl font-bold text-gray-900">Anomaly Detection</h1>
             </div>
             <p className="text-gray-600 mb-8">Analyze visual and textual data for potential threats.</p>
@@ -55,9 +55,9 @@ export const AnomalyDetection = () => {
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     id="file-upload"
                   />
-                  <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 text-center">
+                  <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 text-center">
                     <label htmlFor="file-upload" className="cursor-pointer">
-                      <span className="text-green-700">
+                      <span className="text-blue-700">
                         {visualFile ? visualFile.name : 'Choose File No file chosen'}
                       </span>
                     </label>
@@ -73,14 +73,14 @@ export const AnomalyDetection = () => {
                   value={textualDescription}
                   onChange={(e) => setTextualDescription(e.target.value)}
                   placeholder="e.g., 'Crowd at main stage seems agitated.'"
-                  className="min-h-[120px] bg-green-50 border-green-200 focus:border-green-400 focus:ring-green-400"
+                  className="min-h-[120px] bg-blue-50 border-blue-200 focus:border-blue-400 focus:ring-blue-400"
                 />
               </div>
 
               <Button
                 onClick={handleDetectAnomaly}
                 disabled={isDetecting || (!visualFile && !textualDescription.trim())}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg"
+                className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 rounded-lg"
               >
                 {isDetecting ? 'Detecting...' : 'Detect Anomaly'}
               </Button>

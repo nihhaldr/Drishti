@@ -27,7 +27,7 @@ export const SituationalSummaries = () => {
         <Card className="bg-white border border-gray-200 rounded-lg shadow-sm">
           <div className="p-8">
             <div className="flex items-center gap-3 mb-2">
-              <Sparkles className="w-6 h-6 text-green-600" />
+              <Sparkles className="w-6 h-6 text-primary" />
               <h1 className="text-2xl font-bold text-gray-900">Situational Summary</h1>
             </div>
             <p className="text-gray-600 mb-8">Query the AI for a real-time situation summary.</p>
@@ -41,14 +41,14 @@ export const SituationalSummaries = () => {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="e.g., 'What's the status of the main entrance?'"
-                  className="min-h-[120px] bg-green-50 border-green-200 focus:border-green-400 focus:ring-green-400"
+                  className="min-h-[120px] bg-blue-50 border-blue-200 focus:border-blue-400 focus:ring-blue-400"
                 />
               </div>
 
               <Button
                 onClick={handleGetSummary}
                 disabled={isGenerating || !query.trim()}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg"
+                className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 rounded-lg"
               >
                 {isGenerating ? 'Generating...' : 'Get Summary'}
               </Button>

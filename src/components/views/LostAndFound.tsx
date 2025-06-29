@@ -177,7 +177,7 @@ export const LostAndFound = () => {
           <h1 className="text-2xl font-bold text-gray-900">AI-Powered Lost & Found</h1>
           <p className="text-gray-600">Advanced facial recognition and matching system</p>
         </div>
-        <Badge variant="outline" className="border-blue-500 text-blue-600 bg-blue-50">
+        <Badge variant="outline" className="border-primary text-primary bg-blue-50">
           <Zap className="w-4 h-4 mr-1" />
           AI Vision Active
         </Badge>
@@ -197,7 +197,7 @@ export const LostAndFound = () => {
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
                 activeTab === tab.id 
-                  ? 'bg-white text-blue-600 shadow-sm' 
+                  ? 'bg-white text-primary shadow-sm' 
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -371,7 +371,7 @@ export const LostAndFound = () => {
             <Card className="bg-white border border-gray-200 rounded-lg shadow-sm">
               <div className="p-8">
                 <div className="flex items-center gap-3 mb-2">
-                  <Search className="w-6 h-6 text-green-600" />
+                  <Search className="w-6 h-6 text-primary" />
                   <h1 className="text-2xl font-bold text-gray-900">Lost Person Finder</h1>
                 </div>
                 <p className="text-gray-600 mb-8">Use AI to find a lost person in crowd footage.</p>
@@ -389,9 +389,9 @@ export const LostAndFound = () => {
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         id="lost-person-upload"
                       />
-                      <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 text-center">
+                      <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 text-center">
                         <label htmlFor="lost-person-upload" className="cursor-pointer">
-                          <span className="text-green-700">
+                          <span className="text-blue-700">
                             {lostPersonPhoto ? lostPersonPhoto.name : 'Choose File No file chosen'}
                           </span>
                         </label>
@@ -411,9 +411,9 @@ export const LostAndFound = () => {
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         id="crowd-footage-upload"
                       />
-                      <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 text-center">
+                      <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 text-center">
                         <label htmlFor="crowd-footage-upload" className="cursor-pointer">
-                          <span className="text-green-700">
+                          <span className="text-blue-700">
                             {crowdFootage ? crowdFootage.name : 'Choose File No file chosen'}
                           </span>
                         </label>
@@ -424,7 +424,7 @@ export const LostAndFound = () => {
                   <Button
                     onClick={handleFindPerson}
                     disabled={isSearching || !lostPersonPhoto || !crowdFootage}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg"
+                    className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 rounded-lg"
                   >
                     {isSearching ? 'Searching...' : 'Find Person'}
                   </Button>
