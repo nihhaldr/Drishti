@@ -29,9 +29,7 @@ export const useRealtime = (subscriptions: RealtimeSubscription[]) => {
         )
         .subscribe((status) => {
           console.log('Subscription status:', status);
-          if (status === 'SUBSCRIBED') {
-            setIsConnected(true);
-          }
+          setIsConnected(status === 'SUBSCRIBED');
         });
 
       return channel;

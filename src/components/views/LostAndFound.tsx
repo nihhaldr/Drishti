@@ -1,11 +1,11 @@
-
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Search, Upload, User, Clock, Camera, Zap } from 'lucide-react';
+import { Search, Upload, User, Clock, Camera, Zap, MapPin, Play, Eye } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface LostPerson {
   id: string;
@@ -27,9 +27,24 @@ interface LostPerson {
   }>;
 }
 
+interface SearchResult {
+  personId: string;
+  cameraId: string;
+  location: string;
+  timestamp: string;
+  confidence: number;
+  imageUrl: string;
+  coordinates: { lat: number; lng: number };
+}
+
 export const LostAndFound = () => {
   const [activeTab, setActiveTab] = useState<'report' | 'search' | 'cases'>('cases');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [uploadedPhoto, setUploadedPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string>('');
+  
   const [lostPersons, setLostPersons] = useState<LostPerson[]>([
     {
       id: '1',
@@ -82,6 +97,66 @@ export const LostAndFound = () => {
     photo: null as File | null
   });
 
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setUploadedPhoto(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPhotoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+      toast.success('Photo uploaded successfully');
+    }
+  };
+
+  const handleAISearch = async () => {
+    if (!uploadedPhoto) {
+      toast.error('Please upload a photo first');
+      return;
+    }
+
+    setIsSearching(true);
+    toast.info('Searching across all camera feeds...');
+
+    // Simulate AI search process
+    setTimeout(() => {
+      const mockResults: SearchResult[] = [
+        {
+          personId: 'search-1',
+          cameraId: 'CAM-12',
+          location: 'Main Entrance Gate',
+          timestamp: new Date(Date.now() - 15 * 60000).toLocaleTimeString(),
+          confidence: 92,
+          imageUrl: '/placeholder.svg',
+          coordinates: { lat: 40.7128, lng: -74.0060 }
+        },
+        {
+          personId: 'search-2',
+          cameraId: 'CAM-07',
+          location: 'Food Court - Central Area',
+          timestamp: new Date(Date.now() - 8 * 60000).toLocaleTimeString(),
+          confidence: 88,
+          imageUrl: '/placeholder.svg',
+          coordinates: { lat: 40.7130, lng: -74.0058 }
+        },
+        {
+          personId: 'search-3',
+          cameraId: 'CAM-19',
+          location: 'Parking Lot B - Section 3',
+          timestamp: new Date(Date.now() - 3 * 60000).toLocaleTimeString(),
+          confidence: 85,
+          imageUrl: '/placeholder.svg',
+          coordinates: { lat: 40.7125, lng: -74.0065 }
+        }
+      ];
+
+      setSearchResults(mockResults);
+      setIsSearching(false);
+      toast.success(`Found ${mockResults.length} potential matches!`);
+    }, 3000);
+  };
+
   const handleSubmitReport = (e: React.FormEvent) => {
     e.preventDefault();
     const report: LostPerson = {
@@ -98,6 +173,7 @@ export const LostAndFound = () => {
     setLostPersons(prev => [report, ...prev]);
     setNewReport({ name: '', age: '', description: '', lastSeenLocation: '', contact: '', photo: null });
     setActiveTab('cases');
+    toast.success('Missing person report submitted');
   };
 
   const getStatusColor = (status: string) => {
@@ -107,6 +183,12 @@ export const LostAndFound = () => {
       case 'missing': return 'bg-red-500';
       default: return 'bg-gray-500';
     }
+  };
+
+  const getConfidenceColor = (confidence: number) => {
+    if (confidence >= 90) return 'bg-green-500';
+    if (confidence >= 80) return 'bg-yellow-500';
+    return 'bg-orange-500';
   };
 
   return (
@@ -298,32 +380,151 @@ export const LostAndFound = () => {
       )}
 
       {activeTab === 'search' && (
-        <Card className="bg-white border-gray-200 p-6">
-          <h2 className="text-xl font-semibold mb-4">AI-Powered Search</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Upload Photo to Search</label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <Camera className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-                <p className="text-gray-600 mb-2">Upload a photo to search across all camera feeds</p>
-                <Button className="bg-blue-600 hover:bg-blue-700">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Choose Photo
+        <div className="space-y-6">
+          <Card className="bg-white border-gray-200 p-6">
+            <h2 className="text-xl font-semibold mb-4">AI-Powered Photo Search</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Upload Photo to Search</label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  {photoPreview ? (
+                    <div className="space-y-3">
+                      <img src={photoPreview} alt="Uploaded" className="w-32 h-32 mx-auto rounded-lg object-cover" />
+                      <p className="text-green-600 font-medium">Photo uploaded successfully</p>
+                      <Button
+                        onClick={() => {
+                          setUploadedPhoto(null);
+                          setPhotoPreview('');
+                        }}
+                        variant="outline"
+                        size="sm"
+                      >
+                        Remove Photo
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <Camera className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                      <p className="text-gray-600 mb-2">Upload a photo to search across all camera feeds</p>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="hidden"
+                        id="photo-upload"
+                      />
+                      <label htmlFor="photo-upload">
+                        <Button className="bg-blue-600 hover:bg-blue-700" asChild>
+                          <span>
+                            <Upload className="w-4 h-4 mr-2" />
+                            Choose Photo
+                          </span>
+                        </Button>
+                      </label>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {uploadedPhoto && (
+                <Button
+                  onClick={handleAISearch}
+                  disabled={isSearching}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  {isSearching ? (
+                    <>
+                      <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                      Searching Camera Feeds...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-4 h-4 mr-2" />
+                      Search Across All Cameras
+                    </>
+                  )}
                 </Button>
+              )}
+              
+              <div className="bg-blue-50 p-4 rounded border">
+                <h3 className="font-medium text-blue-900 mb-2">How AI Search Works:</h3>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Facial recognition across 127 active cameras</li>
+                  <li>• Real-time processing with 98% accuracy</li>
+                  <li>• Historical footage analysis (last 24 hours)</li>
+                  <li>• Confidence scoring for each match</li>
+                  <li>• GPS coordinates and timestamps for each detection</li>
+                </ul>
               </div>
             </div>
-            
-            <div className="bg-blue-50 p-4 rounded border">
-              <h3 className="font-medium text-blue-900 mb-2">How AI Search Works:</h3>
-              <ul className="text-sm text-blue-800 space-y-1">
-                <li>• Facial recognition across 127 active cameras</li>
-                <li>• Real-time processing with 98% accuracy</li>
-                <li>• Historical footage analysis (last 24 hours)</li>
-                <li>• Confidence scoring for each match</li>
-              </ul>
-            </div>
-          </div>
-        </Card>
+          </Card>
+
+          {searchResults.length > 0 && (
+            <Card className="bg-white border-gray-200 p-6">
+              <h3 className="text-xl font-semibold mb-4">Search Results</h3>
+              <div className="space-y-4">
+                {searchResults.map((result, index) => (
+                  <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <Badge className={`${getConfidenceColor(result.confidence)} text-white`}>
+                          {result.confidence}% Match
+                        </Badge>
+                        <span className="font-medium">{result.location}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Clock className="w-4 h-4" />
+                        {result.timestamp}
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <img 
+                          src={result.imageUrl} 
+                          alt="Detection"
+                          className="w-full h-32 rounded object-cover"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Camera: {result.cameraId}</p>
+                      </div>
+                      
+                      <div className="md:col-span-2 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-red-500" />
+                          <span className="font-medium">Location Details:</span>
+                        </div>
+                        <div className="bg-white p-3 rounded border">
+                          <p className="font-medium">{result.location}</p>
+                          <p className="text-sm text-gray-600">
+                            Coordinates: {result.coordinates.lat.toFixed(6)}, {result.coordinates.lng.toFixed(6)}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Last seen: {result.timestamp}
+                          </p>
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                            <Eye className="w-4 h-4 mr-1" />
+                            View Live Feed
+                          </Button>
+                          <Button size="sm" variant="outline">
+                            <Play className="w-4 h-4 mr-1" />
+                            View Recording
+                          </Button>
+                          <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                            <MapPin className="w-4 h-4 mr-1" />
+                            Navigate to Location
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
       )}
     </div>
   );
