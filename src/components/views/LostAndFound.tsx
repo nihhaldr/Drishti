@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,26 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Search, Upload, User, Clock, Camera, Zap, MapPin, Play, Eye } from 'lucide-react';
 import { toast } from 'sonner';
-
-interface LostPerson {
-  id: string;
-  name: string;
-  age: number;
-  description: string;
-  lastSeenLocation: string;
-  lastSeenTime: string;
-  photoUrl: string;
-  reporterContact: string;
-  status: 'missing' | 'found' | 'investigating';
-  aiMatchConfidence?: number;
-  potentialMatches?: Array<{
-    cameraId: string;
-    location: string;
-    timestamp: string;
-    confidence: number;
-    imageUrl: string;
-  }>;
-}
+import { lostAndFoundService, LostPerson } from '@/services/lostAndFoundService';
+import { useRealtime } from '@/hooks/useRealtime';
 
 interface SearchResult {
   personId: string;
@@ -43,39 +26,41 @@ export const LostAndFound = () => {
   const [lostPersonPhoto, setLostPersonPhoto] = useState<File | null>(null);
   const [crowdFootage, setCrowdFootage] = useState<File | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [lostPersons, setLostPersons] = useState<LostPerson[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
-  const [lostPersons, setLostPersons] = useState<LostPerson[]>([
-    {
-      id: '1',
-      name: 'Sarah Johnson',
-      age: 8,
-      description: 'Blonde hair, blue dress, carrying a teddy bear',
-      lastSeenLocation: 'Near the carousel',
-      lastSeenTime: '2:30 PM',
-      photoUrl: '/placeholder.svg',
-      reporterContact: 'Mom - (555) 123-4567',
-      status: 'investigating',
-      aiMatchConfidence: 87,
-      potentialMatches: [
-        {
-          cameraId: 'CAM-15',
-          location: 'Food Court - North Entrance',
-          timestamp: '2:45 PM',
-          confidence: 87,
-          imageUrl: '/placeholder.svg'
-        }
-      ]
-    }
-  ]);
-
   const [newReport, setNewReport] = useState({
     name: '',
     age: '',
     description: '',
     lastSeenLocation: '',
     contact: '',
+    phone: '',
     photo: null as File | null
   });
+
+  // Set up realtime subscriptions
+  useRealtime([
+    {
+      table: 'lost_persons',
+      event: '*',
+      callback: () => {
+        // Refresh data when there are changes
+        loadLostPersons();
+      }
+    }
+  ]);
+
+  const loadLostPersons = async () => {
+    setIsLoading(true);
+    const persons = await lostAndFoundService.getAllLostPersons();
+    setLostPersons(persons);
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    loadLostPersons();
+  }, []);
 
   const handleLostPersonPhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -90,6 +75,14 @@ export const LostAndFound = () => {
     if (file) {
       setCrowdFootage(file);
       toast.success('Crowd footage uploaded successfully');
+    }
+  };
+
+  const handleReportPhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setNewReport(prev => ({ ...prev, photo: file }));
+      toast.success('Photo uploaded successfully');
     }
   };
 
@@ -131,28 +124,65 @@ export const LostAndFound = () => {
     }, 3000);
   };
 
-  const handleSubmitReport = (e: React.FormEvent) => {
+  const handleSubmitReport = async (e: React.FormEvent) => {
     e.preventDefault();
-    const report: LostPerson = {
-      id: Date.now().toString(),
+    
+    if (!newReport.name || !newReport.age || !newReport.description || !newReport.lastSeenLocation || !newReport.contact) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    let photoUrl = '/placeholder.svg';
+    
+    // Upload photo if provided
+    if (newReport.photo) {
+      const uploadedUrl = await lostAndFoundService.uploadPhoto(newReport.photo);
+      if (uploadedUrl) {
+        photoUrl = uploadedUrl;
+      } else {
+        toast.error('Failed to upload photo, but report will be submitted');
+      }
+    }
+
+    const reportData: Omit<LostPerson, 'id' | 'created_at' | 'updated_at'> = {
       name: newReport.name,
       age: parseInt(newReport.age),
       description: newReport.description,
-      lastSeenLocation: newReport.lastSeenLocation,
-      lastSeenTime: new Date().toLocaleTimeString(),
-      photoUrl: '/placeholder.svg',
-      reporterContact: newReport.contact,
+      last_seen_location: newReport.lastSeenLocation,
+      last_seen_time: new Date().toISOString(),
+      photo_url: photoUrl,
+      contact_name: newReport.contact,
+      contact_phone: newReport.phone,
       status: 'missing'
     };
-    setLostPersons(prev => [report, ...prev]);
-    setNewReport({ name: '', age: '', description: '', lastSeenLocation: '', contact: '', photo: null });
-    setActiveTab('cases');
-    toast.success('Missing person report submitted');
+
+    const createdPerson = await lostAndFoundService.createLostPerson(reportData);
+    
+    if (createdPerson) {
+      setNewReport({ name: '', age: '', description: '', lastSeenLocation: '', contact: '', phone: '', photo: null });
+      setActiveTab('cases');
+      toast.success('Missing person report submitted successfully');
+    } else {
+      toast.error('Failed to submit report. Please try again.');
+    }
   };
 
-  const handleRemoveReport = (id: string) => {
-    setLostPersons(prev => prev.filter(person => person.id !== id));
-    toast.success('Report removed');
+  const handleStatusUpdate = async (id: string, status: 'missing' | 'found' | 'investigating') => {
+    const success = await lostAndFoundService.updateLostPersonStatus(id, status);
+    if (success) {
+      toast.success(`Status updated to ${status}`);
+    } else {
+      toast.error('Failed to update status');
+    }
+  };
+
+  const handleRemoveReport = async (id: string) => {
+    const success = await lostAndFoundService.deleteLostPerson(id);
+    if (success) {
+      toast.success('Report removed successfully');
+    } else {
+      toast.error('Failed to remove report');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -225,79 +255,76 @@ export const LostAndFound = () => {
             </div>
           </div>
 
-          {lostPersons.map(person => (
-            <Card key={person.id} className="bg-white border-gray-200 p-6">
-              <div className="flex gap-4">
-                <img 
-                  src={person.photoUrl} 
-                  alt={person.name}
-                  className="w-20 h-20 rounded-lg object-cover"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-lg font-semibold">{person.name}</h3>
-                    <Badge className={`${getStatusColor(person.status)} text-white`}>
-                      {person.status.toUpperCase()}
-                    </Badge>
-                    {person.aiMatchConfidence && (
-                      <Badge variant="outline">
-                        {person.aiMatchConfidence}% AI Match
+          {isLoading ? (
+            <div className="text-center py-8">Loading cases...</div>
+          ) : lostPersons.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">No active cases</div>
+          ) : (
+            lostPersons.map(person => (
+              <Card key={person.id} className="bg-white border-gray-200 p-6">
+                <div className="flex gap-4">
+                  <img 
+                    src={person.photo_url} 
+                    alt={person.name}
+                    className="w-20 h-20 rounded-lg object-cover"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-lg font-semibold">{person.name}</h3>
+                      <Badge className={`${getStatusColor(person.status)} text-white`}>
+                        {person.status.toUpperCase()}
                       </Badge>
+                      {person.ai_match_confidence && (
+                        <Badge variant="outline">
+                          {person.ai_match_confidence}% AI Match
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-3">
+                      <div>Age: {person.age} years</div>
+                      <div>Last seen: {new Date(person.last_seen_time).toLocaleTimeString()}</div>
+                      <div>Location: {person.last_seen_location}</div>
+                      <div>Contact: {person.contact_name} - {person.contact_phone}</div>
+                    </div>
+                    <p className="text-gray-700 mb-3">{person.description}</p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                      View Details
+                    </Button>
+                    <Button size="sm" variant="outline">
+                      Contact Reporter
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="destructive"
+                      onClick={() => handleRemoveReport(person.id)}
+                    >
+                      Remove
+                    </Button>
+                    {person.status === 'missing' && (
+                      <Button 
+                        size="sm" 
+                        className="bg-yellow-600 hover:bg-yellow-700"
+                        onClick={() => handleStatusUpdate(person.id, 'investigating')}
+                      >
+                        Mark Investigating
+                      </Button>
+                    )}
+                    {person.status === 'investigating' && (
+                      <Button 
+                        size="sm" 
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => handleStatusUpdate(person.id, 'found')}
+                      >
+                        Mark Found
+                      </Button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-3">
-                    <div>Age: {person.age} years</div>
-                    <div>Last seen: {person.lastSeenTime}</div>
-                    <div>Location: {person.lastSeenLocation}</div>
-                    <div>Contact: {person.reporterContact}</div>
-                  </div>
-                  <p className="text-gray-700 mb-3">{person.description}</p>
-                  
-                  {person.potentialMatches && (
-                    <div className="bg-blue-50 p-4 rounded border">
-                      <h4 className="font-medium mb-2">AI Potential Matches:</h4>
-                      <div className="space-y-2">
-                        {person.potentialMatches.map((match, index) => (
-                          <div key={index} className="flex items-center justify-between bg-white p-2 rounded">
-                            <div className="flex items-center gap-3">
-                              <img src={match.imageUrl} alt="Match" className="w-12 h-12 rounded object-cover" />
-                              <div>
-                                <div className="font-medium">{match.location}</div>
-                                <div className="text-sm text-gray-500">{match.timestamp}</div>
-                              </div>
-                            </div>
-                            <Badge className={match.confidence > 80 ? 'bg-green-500' : 'bg-yellow-500'} variant="outline">
-                              {match.confidence}%
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
-                <div className="flex flex-col gap-2">
-                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                    View Details
-                  </Button>
-                  <Button size="sm" variant="outline">
-                    Contact Reporter
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="destructive"
-                    onClick={() => handleRemoveReport(person.id)}
-                  >
-                    Remove
-                  </Button>
-                  {person.status === 'investigating' && (
-                    <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                      Mark Found
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            ))
+          )}
         </div>
       )}
 
@@ -307,7 +334,7 @@ export const LostAndFound = () => {
           <form onSubmit={handleSubmitReport} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Name</label>
+                <label className="block text-sm font-medium mb-1">Name *</label>
                 <Input 
                   value={newReport.name}
                   onChange={(e) => setNewReport(prev => ({ ...prev, name: e.target.value }))}
@@ -315,7 +342,7 @@ export const LostAndFound = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Age</label>
+                <label className="block text-sm font-medium mb-1">Age *</label>
                 <Input 
                   type="number"
                   value={newReport.age}
@@ -325,7 +352,7 @@ export const LostAndFound = () => {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Description</label>
+              <label className="block text-sm font-medium mb-1">Description *</label>
               <Textarea 
                 value={newReport.description}
                 onChange={(e) => setNewReport(prev => ({ ...prev, description: e.target.value }))}
@@ -334,31 +361,47 @@ export const LostAndFound = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Last Seen Location</label>
+              <label className="block text-sm font-medium mb-1">Last Seen Location *</label>
               <Input 
                 value={newReport.lastSeenLocation}
                 onChange={(e) => setNewReport(prev => ({ ...prev, lastSeenLocation: e.target.value }))}
                 required 
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Your Contact Information</label>
-              <Input 
-                value={newReport.contact}
-                onChange={(e) => setNewReport(prev => ({ ...prev, contact: e.target.value }))}
-                placeholder="Phone number or radio call sign"
-                required 
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Your Name *</label>
+                <Input 
+                  value={newReport.contact}
+                  onChange={(e) => setNewReport(prev => ({ ...prev, contact: e.target.value }))}
+                  required 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Phone Number</label>
+                <Input 
+                  value={newReport.phone}
+                  onChange={(e) => setNewReport(prev => ({ ...prev, phone: e.target.value }))}
+                  placeholder="Phone number or radio call sign"
+                />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Upload Photo</label>
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleReportPhotoUpload}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
                 <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                <p className="text-gray-600">Click to upload or drag and drop</p>
-                <input type="file" accept="image/*" className="hidden" />
+                <p className="text-gray-600">
+                  {newReport.photo ? newReport.photo.name : 'Click to upload or drag and drop'}
+                </p>
               </div>
             </div>
-            <Button type="submit" className="w-full bg-red-600 hover:bg-red-700">
+            <Button type="submit" className="w-full bg-google-red hover:bg-red-700 text-white">
               Submit Missing Person Report
             </Button>
           </form>
@@ -424,7 +467,7 @@ export const LostAndFound = () => {
                   <Button
                     onClick={handleFindPerson}
                     disabled={isSearching || !lostPersonPhoto || !crowdFootage}
-                    className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 rounded-lg"
+                    className="w-full bg-google-red hover:bg-red-700 text-white font-semibold py-3 rounded-lg"
                   >
                     {isSearching ? 'Searching...' : 'Find Person'}
                   </Button>
