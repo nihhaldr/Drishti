@@ -80,7 +80,7 @@ export const AnomalyDetection = () => {
               <Button
                 onClick={handleDetectAnomaly}
                 disabled={isDetecting || (!visualFile && !textualDescription.trim())}
-                className="w-full bg-google-red hover:bg-red-700 text-white font-semibold py-3 rounded-lg"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg"
               >
                 {isDetecting ? 'Detecting...' : 'Detect Anomaly'}
               </Button>

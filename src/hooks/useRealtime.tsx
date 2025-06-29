@@ -41,7 +41,7 @@ export const useRealtime = (subscriptions: RealtimeSubscription[]) => {
       });
       setIsConnected(false);
     };
-  }, [JSON.stringify(subscriptions)]);
+  }, [subscriptions]);
 
   return { isConnected };
 };

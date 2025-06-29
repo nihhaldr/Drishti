@@ -50,7 +50,7 @@ export const SituationalSummaries = () => {
               <Button
                 onClick={handleGetSummary}
                 disabled={isGenerating || !query.trim()}
-                className="w-full bg-google-red hover:bg-red-700 text-white font-semibold py-3 rounded-lg"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg"
               >
                 {isGenerating ? 'Generating...' : 'Get Summary'}
               </Button>

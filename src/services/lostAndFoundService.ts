@@ -22,6 +22,48 @@ class LostAndFoundService {
   private lastFetch: number = 0;
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
   private observers: Set<() => void> = new Set();
+  private readonly STORAGE_KEY = 'lost_persons_cache';
+  private readonly STORAGE_TIMESTAMP_KEY = 'lost_persons_cache_timestamp';
+
+  constructor() {
+    this.loadFromStorage();
+  }
+
+  // Load cached data from localStorage on initialization
+  private loadFromStorage() {
+    try {
+      const cachedData = localStorage.getItem(this.STORAGE_KEY);
+      const cachedTimestamp = localStorage.getItem(this.STORAGE_TIMESTAMP_KEY);
+      
+      if (cachedData && cachedTimestamp) {
+        const timestamp = parseInt(cachedTimestamp);
+        const now = Date.now();
+        
+        // Use cached data if it's still valid
+        if ((now - timestamp) < this.CACHE_DURATION) {
+          const persons: LostPerson[] = JSON.parse(cachedData);
+          this.cache.clear();
+          persons.forEach(person => {
+            this.cache.set(person.id, person);
+          });
+          this.lastFetch = timestamp;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading from storage:', error);
+    }
+  }
+
+  // Save data to localStorage
+  private saveToStorage() {
+    try {
+      const persons = Array.from(this.cache.values());
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(persons));
+      localStorage.setItem(this.STORAGE_TIMESTAMP_KEY, this.lastFetch.toString());
+    } catch (error) {
+      console.error('Error saving to storage:', error);
+    }
+  }
 
   // Subscribe to cache updates
   subscribe(callback: () => void) {
@@ -74,11 +116,12 @@ class LostAndFoundService {
       });
 
       this.lastFetch = now;
+      this.saveToStorage();
       this.notifyObservers();
       return Array.from(this.cache.values());
     } catch (error) {
       console.error('Error fetching lost persons:', error);
-      return [];
+      return Array.from(this.cache.values()); // Return cached data on error
     }
   }
 
@@ -118,8 +161,9 @@ class LostAndFoundService {
         updated_at: data.updated_at
       };
 
-      // Update cache
+      // Update cache and storage
       this.cache.set(newPerson.id, newPerson);
+      this.saveToStorage();
       this.notifyObservers();
       return newPerson;
     } catch (error) {
@@ -146,6 +190,7 @@ class LostAndFoundService {
         cachedPerson.status = status;
         cachedPerson.updated_at = new Date().toISOString();
         this.cache.set(id, cachedPerson);
+        this.saveToStorage();
         this.notifyObservers();
       }
 
@@ -165,8 +210,9 @@ class LostAndFoundService {
 
       if (error) throw error;
 
-      // Remove from cache
+      // Remove from cache and storage
       this.cache.delete(id);
+      this.saveToStorage();
       this.notifyObservers();
       return true;
     } catch (error) {
@@ -211,6 +257,8 @@ class LostAndFoundService {
   clearCache(): void {
     this.cache.clear();
     this.lastFetch = 0;
+    localStorage.removeItem(this.STORAGE_KEY);
+    localStorage.removeItem(this.STORAGE_TIMESTAMP_KEY);
     this.notifyObservers();
   }
 }

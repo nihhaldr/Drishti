@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,15 +45,17 @@ export const LostAndFound = () => {
   });
 
   // Set up realtime subscriptions
-  useRealtime([
+  const realtimeSubscriptions = [
     {
       table: 'lost_persons',
-      event: '*',
+      event: '*' as const,
       callback: () => {
         loadLostPersons();
       }
     }
-  ]);
+  ];
+
+  useRealtime(realtimeSubscriptions);
 
   const loadLostPersons = async () => {
     setIsLoading(true);
@@ -72,18 +75,6 @@ export const LostAndFound = () => {
 
     return unsubscribe;
   }, []);
-
-  const handleLostPersonPhotoClick = () => {
-    lostPersonFileRef.current?.click();
-  };
-
-  const handleCrowdFootageClick = () => {
-    crowdFootageFileRef.current?.click();
-  };
-
-  const handleReportPhotoClick = () => {
-    reportPhotoFileRef.current?.click();
-  };
 
   const handleLostPersonPhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -420,18 +411,12 @@ export const LostAndFound = () => {
                   type="file" 
                   accept="image/*" 
                   onChange={handleReportPhotoUpload}
-                  className="hidden"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
-                <button
-                  type="button"
-                  onClick={handleReportPhotoClick}
-                  className="w-full h-full flex flex-col items-center justify-center"
-                >
-                  <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                  <p className="text-gray-600">
-                    {newReport.photo ? newReport.photo.name : 'Click to upload or drag and drop'}
-                  </p>
-                </button>
+                <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                <p className="text-gray-600">
+                  {newReport.photo ? newReport.photo.name : 'Click to upload or drag and drop'}
+                </p>
               </div>
             </div>
             <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
@@ -463,12 +448,9 @@ export const LostAndFound = () => {
                         type="file"
                         accept="image/*"
                         onChange={handleLostPersonPhotoUpload}
-                        className="hidden"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       />
-                      <div 
-                        onClick={handleLostPersonPhotoClick}
-                        className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 text-center cursor-pointer hover:bg-blue-100"
-                      >
+                      <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 text-center">
                         <span className="text-blue-700">
                           {lostPersonPhoto ? lostPersonPhoto.name : 'Choose File No file chosen'}
                         </span>
@@ -486,12 +468,9 @@ export const LostAndFound = () => {
                         type="file"
                         accept="video/*,image/*"
                         onChange={handleCrowdFootageUpload}
-                        className="hidden"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       />
-                      <div 
-                        onClick={handleCrowdFootageClick}
-                        className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 text-center cursor-pointer hover:bg-blue-100"
-                      >
+                      <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 text-center">
                         <span className="text-blue-700">
                           {crowdFootage ? crowdFootage.name : 'Choose File No file chosen'}
                         </span>
