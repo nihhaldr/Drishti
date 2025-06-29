@@ -27,7 +27,7 @@ const menuItems = [
   { id: 'crowd', label: 'Crowd Analysis', icon: Users },
   { id: 'incidents', label: 'Incidents', icon: Bell },
   { id: 'bottleneck', label: 'Bottleneck Analysis', icon: TrendingUp },
-  { id: 'search', label: 'AI Assistant', icon: Brain },
+  { id: 'summaries', label: 'Situational Summary', icon: Brain },
   { id: 'anomaly', label: 'Anomaly Detection', icon: Eye },
   { id: 'lost-found', label: 'Lost & Found', icon: UserSearch },
   { id: 'mobile', label: 'Mobile Staff App', icon: Smartphone },

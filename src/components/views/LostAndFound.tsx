@@ -39,11 +39,10 @@ interface SearchResult {
 
 export const LostAndFound = () => {
   const [activeTab, setActiveTab] = useState<'report' | 'search' | 'cases'>('cases');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [uploadedPhoto, setUploadedPhoto] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string>('');
+  const [lostPersonPhoto, setLostPersonPhoto] = useState<File | null>(null);
+  const [crowdFootage, setCrowdFootage] = useState<File | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
   
   const [lostPersons, setLostPersons] = useState<LostPerson[]>([
     {
@@ -64,27 +63,8 @@ export const LostAndFound = () => {
           timestamp: '2:45 PM',
           confidence: 87,
           imageUrl: '/placeholder.svg'
-        },
-        {
-          cameraId: 'CAM-23',
-          location: 'Main Stage Area',
-          timestamp: '2:52 PM',
-          confidence: 74,
-          imageUrl: '/placeholder.svg'
         }
       ]
-    },
-    {
-      id: '2',
-      name: 'Michael Chen',
-      age: 12,
-      description: 'Black hair, red t-shirt, wearing glasses',
-      lastSeenLocation: 'Games area',
-      lastSeenTime: '1:15 PM',
-      photoUrl: '/placeholder.svg',
-      reporterContact: 'Dad - (555) 987-6543',
-      status: 'found',
-      aiMatchConfidence: 95
     }
   ]);
 
@@ -97,27 +77,30 @@ export const LostAndFound = () => {
     photo: null as File | null
   });
 
-  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLostPersonPhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setUploadedPhoto(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPhotoPreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-      toast.success('Photo uploaded successfully');
+      setLostPersonPhoto(file);
+      toast.success('Lost person photo uploaded successfully');
     }
   };
 
-  const handleAISearch = async () => {
-    if (!uploadedPhoto) {
-      toast.error('Please upload a photo first');
+  const handleCrowdFootageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setCrowdFootage(file);
+      toast.success('Crowd footage uploaded successfully');
+    }
+  };
+
+  const handleFindPerson = async () => {
+    if (!lostPersonPhoto || !crowdFootage) {
+      toast.error('Please upload both lost person photo and crowd footage');
       return;
     }
 
     setIsSearching(true);
-    toast.info('Searching across all camera feeds...');
+    toast.info('Searching for person in crowd footage...');
 
     // Simulate AI search process
     setTimeout(() => {
@@ -139,15 +122,6 @@ export const LostAndFound = () => {
           confidence: 88,
           imageUrl: '/placeholder.svg',
           coordinates: { lat: 40.7130, lng: -74.0058 }
-        },
-        {
-          personId: 'search-3',
-          cameraId: 'CAM-19',
-          location: 'Parking Lot B - Section 3',
-          timestamp: new Date(Date.now() - 3 * 60000).toLocaleTimeString(),
-          confidence: 85,
-          imageUrl: '/placeholder.svg',
-          coordinates: { lat: 40.7125, lng: -74.0065 }
         }
       ];
 
@@ -174,6 +148,11 @@ export const LostAndFound = () => {
     setNewReport({ name: '', age: '', description: '', lastSeenLocation: '', contact: '', photo: null });
     setActiveTab('cases');
     toast.success('Missing person report submitted');
+  };
+
+  const handleRemoveReport = (id: string) => {
+    setLostPersons(prev => prev.filter(person => person.id !== id));
+    toast.success('Report removed');
   };
 
   const getStatusColor = (status: string) => {
@@ -209,7 +188,7 @@ export const LostAndFound = () => {
         {[
           { id: 'cases', label: 'Active Cases', icon: Search },
           { id: 'report', label: 'Report Missing', icon: User },
-          { id: 'search', label: 'AI Search', icon: Camera }
+          { id: 'search', label: 'Lost Person Finder', icon: Camera }
         ].map(tab => {
           const Icon = tab.icon;
           return (
@@ -303,6 +282,13 @@ export const LostAndFound = () => {
                   <Button size="sm" variant="outline">
                     Contact Reporter
                   </Button>
+                  <Button 
+                    size="sm" 
+                    variant="destructive"
+                    onClick={() => handleRemoveReport(person.id)}
+                  >
+                    Remove
+                  </Button>
                   {person.status === 'investigating' && (
                     <Button size="sm" className="bg-green-600 hover:bg-green-700">
                       Mark Found
@@ -380,150 +366,136 @@ export const LostAndFound = () => {
       )}
 
       {activeTab === 'search' && (
-        <div className="space-y-6">
-          <Card className="bg-white border-gray-200 p-6">
-            <h2 className="text-xl font-semibold mb-4">AI-Powered Photo Search</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Upload Photo to Search</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  {photoPreview ? (
-                    <div className="space-y-3">
-                      <img src={photoPreview} alt="Uploaded" className="w-32 h-32 mx-auto rounded-lg object-cover" />
-                      <p className="text-green-600 font-medium">Photo uploaded successfully</p>
-                      <Button
-                        onClick={() => {
-                          setUploadedPhoto(null);
-                          setPhotoPreview('');
-                        }}
-                        variant="outline"
-                        size="sm"
-                      >
-                        Remove Photo
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      <Camera className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-                      <p className="text-gray-600 mb-2">Upload a photo to search across all camera feeds</p>
+        <div className="min-h-screen bg-gray-50 p-6">
+          <div className="max-w-2xl mx-auto">
+            <Card className="bg-white border border-gray-200 rounded-lg shadow-sm">
+              <div className="p-8">
+                <div className="flex items-center gap-3 mb-2">
+                  <Search className="w-6 h-6 text-green-600" />
+                  <h1 className="text-2xl font-bold text-gray-900">Lost Person Finder</h1>
+                </div>
+                <p className="text-gray-600 mb-8">Use AI to find a lost person in crowd footage.</p>
+
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      Photo of Lost Person
+                    </label>
+                    <div className="relative">
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={handlePhotoUpload}
-                        className="hidden"
-                        id="photo-upload"
+                        onChange={handleLostPersonPhotoUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        id="lost-person-upload"
                       />
-                      <label htmlFor="photo-upload">
-                        <Button className="bg-blue-600 hover:bg-blue-700" asChild>
-                          <span>
-                            <Upload className="w-4 h-4 mr-2" />
-                            Choose Photo
+                      <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 text-center">
+                        <label htmlFor="lost-person-upload" className="cursor-pointer">
+                          <span className="text-green-700">
+                            {lostPersonPhoto ? lostPersonPhoto.name : 'Choose File No file chosen'}
                           </span>
-                        </Button>
-                      </label>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {uploadedPhoto && (
-                <Button
-                  onClick={handleAISearch}
-                  disabled={isSearching}
-                  className="w-full bg-green-600 hover:bg-green-700"
-                >
-                  {isSearching ? (
-                    <>
-                      <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                      Searching Camera Feeds...
-                    </>
-                  ) : (
-                    <>
-                      <Search className="w-4 h-4 mr-2" />
-                      Search Across All Cameras
-                    </>
-                  )}
-                </Button>
-              )}
-              
-              <div className="bg-blue-50 p-4 rounded border">
-                <h3 className="font-medium text-blue-900 mb-2">How AI Search Works:</h3>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Facial recognition across 127 active cameras</li>
-                  <li>• Real-time processing with 98% accuracy</li>
-                  <li>• Historical footage analysis (last 24 hours)</li>
-                  <li>• Confidence scoring for each match</li>
-                  <li>• GPS coordinates and timestamps for each detection</li>
-                </ul>
-              </div>
-            </div>
-          </Card>
-
-          {searchResults.length > 0 && (
-            <Card className="bg-white border-gray-200 p-6">
-              <h3 className="text-xl font-semibold mb-4">Search Results</h3>
-              <div className="space-y-4">
-                {searchResults.map((result, index) => (
-                  <div key={index} className="border rounded-lg p-4 bg-gray-50">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <Badge className={`${getConfidenceColor(result.confidence)} text-white`}>
-                          {result.confidence}% Match
-                        </Badge>
-                        <span className="font-medium">{result.location}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Clock className="w-4 h-4" />
-                        {result.timestamp}
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <img 
-                          src={result.imageUrl} 
-                          alt="Detection"
-                          className="w-full h-32 rounded object-cover"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Camera: {result.cameraId}</p>
-                      </div>
-                      
-                      <div className="md:col-span-2 space-y-3">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="w-4 h-4 text-red-500" />
-                          <span className="font-medium">Location Details:</span>
-                        </div>
-                        <div className="bg-white p-3 rounded border">
-                          <p className="font-medium">{result.location}</p>
-                          <p className="text-sm text-gray-600">
-                            Coordinates: {result.coordinates.lat.toFixed(6)}, {result.coordinates.lng.toFixed(6)}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            Last seen: {result.timestamp}
-                          </p>
-                        </div>
-                        
-                        <div className="flex gap-2">
-                          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                            <Eye className="w-4 h-4 mr-1" />
-                            View Live Feed
-                          </Button>
-                          <Button size="sm" variant="outline">
-                            <Play className="w-4 h-4 mr-1" />
-                            View Recording
-                          </Button>
-                          <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                            <MapPin className="w-4 h-4 mr-1" />
-                            Navigate to Location
-                          </Button>
-                        </div>
+                        </label>
                       </div>
                     </div>
                   </div>
-                ))}
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      Crowd Footage
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="video/*,image/*"
+                        onChange={handleCrowdFootageUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        id="crowd-footage-upload"
+                      />
+                      <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 text-center">
+                        <label htmlFor="crowd-footage-upload" className="cursor-pointer">
+                          <span className="text-green-700">
+                            {crowdFootage ? crowdFootage.name : 'Choose File No file chosen'}
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleFindPerson}
+                    disabled={isSearching || !lostPersonPhoto || !crowdFootage}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg"
+                  >
+                    {isSearching ? 'Searching...' : 'Find Person'}
+                  </Button>
+                </div>
+
+                {searchResults.length > 0 && (
+                  <div className="mt-8 space-y-4">
+                    <h3 className="text-xl font-semibold mb-4">Search Results</h3>
+                    {searchResults.map((result, index) => (
+                      <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <Badge className={`${getConfidenceColor(result.confidence)} text-white`}>
+                              {result.confidence}% Match
+                            </Badge>
+                            <span className="font-medium">{result.location}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <Clock className="w-4 h-4" />
+                            {result.timestamp}
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <img 
+                              src={result.imageUrl} 
+                              alt="Detection"
+                              className="w-full h-32 rounded object-cover"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Camera: {result.cameraId}</p>
+                          </div>
+                          
+                          <div className="md:col-span-2 space-y-3">
+                            <div className="flex items-center gap-2">
+                              <MapPin className="w-4 h-4 text-red-500" />
+                              <span className="font-medium">Location Details:</span>
+                            </div>
+                            <div className="bg-white p-3 rounded border">
+                              <p className="font-medium">{result.location}</p>
+                              <p className="text-sm text-gray-600">
+                                Coordinates: {result.coordinates.lat.toFixed(6)}, {result.coordinates.lng.toFixed(6)}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                Last seen: {result.timestamp}
+                              </p>
+                            </div>
+                            
+                            <div className="flex gap-2">
+                              <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                                <Eye className="w-4 h-4 mr-1" />
+                                View Live Feed
+                              </Button>
+                              <Button size="sm" variant="outline">
+                                <Play className="w-4 h-4 mr-1" />
+                                View Recording
+                              </Button>
+                              <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                                <MapPin className="w-4 h-4 mr-1" />
+                                Navigate to Location
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </Card>
-          )}
+          </div>
         </div>
       )}
     </div>
