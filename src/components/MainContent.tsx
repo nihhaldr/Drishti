@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { OverviewDashboard } from '@/components/views/OverviewDashboard';
 import { VideoFeeds } from '@/components/views/VideoFeeds';
 import { CrowdAnalysis } from '@/components/views/CrowdAnalysis';
 import { IncidentManagement } from '@/components/views/IncidentManagement';
@@ -19,8 +18,6 @@ interface MainContentProps {
 export const MainContent = ({ selectedView }: MainContentProps) => {
   const renderView = () => {
     switch (selectedView) {
-      case 'overview':
-        return <OverviewDashboard />;
       case 'feeds':
         return <VideoFeeds />;
       case 'crowd':
@@ -42,7 +39,7 @@ export const MainContent = ({ selectedView }: MainContentProps) => {
       case 'mobile':
         return <MobileStaffApp />;
       default:
-        return <OverviewDashboard />;
+        return <VideoFeeds />;
     }
   };
 

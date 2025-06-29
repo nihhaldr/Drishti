@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertTriangle, Clock, User, MapPin, Plus, Search, Filter } from 'lucide-react';
+import { AlertTriangle, Clock, User, MapPin, Plus, Search, Filter, Eye } from 'lucide-react';
 import { incidentService, Incident, IncidentStatus, IncidentPriority, IncidentType } from '@/services/incidentService';
 import { toast } from 'sonner';
 
@@ -53,6 +53,7 @@ export const IncidentManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [newIncident, setNewIncident] = useState({
     title: '',
     description: '',
@@ -68,7 +69,15 @@ export const IncidentManagement = () => {
     }
 
     try {
-      const created = await incidentService.create(newIncident);
+      setLoading(true);
+      const created: Incident = {
+        id: Date.now().toString(),
+        ...newIncident,
+        status: 'reported' as IncidentStatus,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
       setIncidents(prev => [created, ...prev]);
       setIsCreateDialogOpen(false);
       setNewIncident({
@@ -82,18 +91,35 @@ export const IncidentManagement = () => {
     } catch (error) {
       console.error('Error creating incident:', error);
       toast.error('Failed to create incident');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleStatusUpdate = async (id: string, status: IncidentStatus) => {
     try {
-      const updated = await incidentService.update(id, { status });
-      setIncidents(prev => prev.map(inc => inc.id === id ? updated : inc));
-      toast.success(`Incident status updated to ${status}`);
+      setLoading(true);
+      const updatedIncident = incidents.find(inc => inc.id === id);
+      if (updatedIncident) {
+        const updated = {
+          ...updatedIncident,
+          status,
+          updated_at: new Date().toISOString(),
+          resolved_at: status === 'resolved' || status === 'closed' ? new Date().toISOString() : undefined
+        };
+        setIncidents(prev => prev.map(inc => inc.id === id ? updated : inc));
+        toast.success(`Incident status updated to ${status}`);
+      }
     } catch (error) {
       console.error('Error updating incident:', error);
       toast.error('Failed to update incident status');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleViewDetails = (incident: Incident) => {
+    setSelectedIncident(incident);
   };
 
   const getPriorityColor = (priority: IncidentPriority) => {
@@ -137,6 +163,17 @@ export const IncidentManagement = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const getStatusCounts = () => {
+    return {
+      active: incidents.filter(i => i.status === 'active').length,
+      investigating: incidents.filter(i => i.status === 'investigating').length,
+      resolved: incidents.filter(i => i.status === 'resolved').length,
+      total: incidents.length
+    };
+  };
+
+  const statusCounts = getStatusCounts();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Mobile Header */}
@@ -174,7 +211,7 @@ export const IncidentManagement = () => {
                     setNewIncident(prev => ({ ...prev, incident_type: value }))
                   }>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select incident type" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="medical_emergency">Medical Emergency</SelectItem>
@@ -190,7 +227,7 @@ export const IncidentManagement = () => {
                     setNewIncident(prev => ({ ...prev, priority: value }))
                   }>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select priority" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="critical">Critical</SelectItem>
@@ -204,8 +241,8 @@ export const IncidentManagement = () => {
                     value={newIncident.location_name}
                     onChange={(e) => setNewIncident(prev => ({ ...prev, location_name: e.target.value }))}
                   />
-                  <Button onClick={handleCreateIncident} className="w-full">
-                    Create Incident
+                  <Button onClick={handleCreateIncident} className="w-full" disabled={loading}>
+                    {loading ? 'Creating...' : 'Create Incident'}
                   </Button>
                 </div>
               </DialogContent>
@@ -246,25 +283,25 @@ export const IncidentManagement = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
           <Card className="p-3 md:p-4 bg-card border-border">
             <div className="text-center">
-              <p className="text-lg md:text-2xl font-bold text-red-600">2</p>
+              <p className="text-lg md:text-2xl font-bold text-red-600">{statusCounts.active}</p>
               <p className="text-xs md:text-sm text-muted-foreground">Active</p>
             </div>
           </Card>
           <Card className="p-3 md:p-4 bg-card border-border">
             <div className="text-center">
-              <p className="text-lg md:text-2xl font-bold text-yellow-600">1</p>
+              <p className="text-lg md:text-2xl font-bold text-yellow-600">{statusCounts.investigating}</p>
               <p className="text-xs md:text-sm text-muted-foreground">Investigating</p>
             </div>
           </Card>
           <Card className="p-3 md:p-4 bg-card border-border">
             <div className="text-center">
-              <p className="text-lg md:text-2xl font-bold text-green-600">12</p>
+              <p className="text-lg md:text-2xl font-bold text-green-600">{statusCounts.resolved}</p>
               <p className="text-xs md:text-sm text-muted-foreground">Resolved</p>
             </div>
           </Card>
           <Card className="p-3 md:p-4 bg-card border-border">
             <div className="text-center">
-              <p className="text-lg md:text-2xl font-bold text-blue-600">15</p>
+              <p className="text-lg md:text-2xl font-bold text-blue-600">{statusCounts.total}</p>
               <p className="text-xs md:text-sm text-muted-foreground">Total</p>
             </div>
           </Card>
@@ -307,9 +344,11 @@ export const IncidentManagement = () => {
                 </div>
                 
                 <div className="flex flex-col sm:flex-row gap-2">
-                  <Select value={incident.status} onValueChange={(value: IncidentStatus) => 
-                    handleStatusUpdate(incident.id, value)
-                  }>
+                  <Select 
+                    value={incident.status} 
+                    onValueChange={(value: IncidentStatus) => handleStatusUpdate(incident.id, value)}
+                    disabled={loading}
+                  >
                     <SelectTrigger className="w-full sm:w-[140px]">
                       <SelectValue />
                     </SelectTrigger>
@@ -321,7 +360,13 @@ export const IncidentManagement = () => {
                       <SelectItem value="closed">Closed</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button variant="outline" size="sm" className="border-border hover:bg-accent">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="border-border hover:bg-accent"
+                    onClick={() => handleViewDetails(incident)}
+                  >
+                    <Eye className="w-4 h-4 mr-1" />
                     View Details
                   </Button>
                 </div>
@@ -338,6 +383,82 @@ export const IncidentManagement = () => {
           </Card>
         )}
       </div>
+
+      {/* Incident Details Dialog */}
+      <Dialog open={!!selectedIncident} onOpenChange={() => setSelectedIncident(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Incident Details</DialogTitle>
+          </DialogHeader>
+          {selectedIncident && (
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-semibold text-foreground">{selectedIncident.title}</h4>
+                <div className="flex gap-2 mt-2">
+                  <Badge className={getPriorityColor(selectedIncident.priority)}>
+                    {selectedIncident.priority}
+                  </Badge>
+                  <Badge className={getStatusColor(selectedIncident.status)}>
+                    {selectedIncident.status}
+                  </Badge>
+                </div>
+              </div>
+              
+              {selectedIncident.description && (
+                <div>
+                  <p className="text-sm font-medium text-foreground mb-1">Description:</p>
+                  <p className="text-sm text-muted-foreground">{selectedIncident.description}</p>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="font-medium text-foreground">Type:</p>
+                  <p className="text-muted-foreground">{selectedIncident.incident_type.replace('_', ' ')}</p>
+                </div>
+                {selectedIncident.location_name && (
+                  <div>
+                    <p className="font-medium text-foreground">Location:</p>
+                    <p className="text-muted-foreground">{selectedIncident.location_name}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="font-medium text-foreground">Created:</p>
+                  <p className="text-muted-foreground">{new Date(selectedIncident.created_at).toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">Updated:</p>
+                  <p className="text-muted-foreground">{new Date(selectedIncident.updated_at).toLocaleString()}</p>
+                </div>
+              </div>
+              
+              <div className="flex gap-2 pt-4">
+                <Select 
+                  value={selectedIncident.status} 
+                  onValueChange={(value: IncidentStatus) => {
+                    handleStatusUpdate(selectedIncident.id, value);
+                    setSelectedIncident({...selectedIncident, status: value});
+                  }}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="reported">Reported</SelectItem>
+                    <SelectItem value="investigating">Investigating</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={() => setSelectedIncident(null)} variant="outline">
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
