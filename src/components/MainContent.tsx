@@ -9,6 +9,7 @@ import { BottleneckAnalysis } from '@/components/views/BottleneckAnalysis';
 import { AnomalyDetection } from '@/components/views/AnomalyDetection';
 import { LostAndFound } from '@/components/views/LostAndFound';
 import { MobileStaffApp } from '@/components/MobileStaffApp';
+import { OverviewDashboard } from '@/components/views/OverviewDashboard';
 
 interface MainContentProps {
   selectedView: string;
@@ -17,6 +18,8 @@ interface MainContentProps {
 export const MainContent = ({ selectedView }: MainContentProps) => {
   const renderView = () => {
     switch (selectedView) {
+      case 'overview':
+        return <OverviewDashboard />;
       case 'feeds':
         return <VideoFeeds />;
       case 'crowd':
@@ -37,7 +40,7 @@ export const MainContent = ({ selectedView }: MainContentProps) => {
       case 'mobile':
         return <MobileStaffApp />;
       default:
-        return <VideoFeeds />;
+        return <OverviewDashboard />;
     }
   };
 

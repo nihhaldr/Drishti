@@ -3,16 +3,67 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { QrCode, Smartphone, AlertTriangle, Bell, Camera, MapPin } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { QrCode, Smartphone, AlertTriangle, Bell, Camera, MapPin, Plus, X, User, Clock } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+interface StaffMember {
+  id: string;
+  name: string;
+  location: string;
+  status: 'Active' | 'Standby' | 'Offline';
+  lastUpdate: string;
+  role: string;
+}
 
 export const MobileStaffApp = () => {
   const [qrCode, setQrCode] = useState('');
-  const [staffConnected, setStaffConnected] = useState(12);
+  const [connectedStaff, setConnectedStaff] = useState<StaffMember[]>([
+    { id: '1', name: 'Security Team Alpha', location: 'Main Gate', status: 'Active', lastUpdate: '2 min ago', role: 'Security' },
+    { id: '2', name: 'Medical Unit 1', location: 'Food Court', status: 'Standby', lastUpdate: '5 min ago', role: 'Medical' },
+    { id: '3', name: 'Safety Officer Mike', location: 'VIP Area', status: 'Active', lastUpdate: '1 min ago', role: 'Safety' },
+  ]);
+  const [isAddingStaff, setIsAddingStaff] = useState(false);
+  const [newStaff, setNewStaff] = useState({
+    name: '',
+    location: '',
+    status: 'Active' as 'Active' | 'Standby' | 'Offline',
+    role: ''
+  });
 
   useEffect(() => {
     // Generate QR code URL for mobile app download
     setQrCode('https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=https://safety-command-mobile.app');
   }, []);
+
+  const handleAddStaff = () => {
+    if (newStaff.name && newStaff.location && newStaff.role) {
+      const staff: StaffMember = {
+        id: Date.now().toString(),
+        name: newStaff.name,
+        location: newStaff.location,
+        status: newStaff.status,
+        lastUpdate: 'Just now',
+        role: newStaff.role
+      };
+      setConnectedStaff([...connectedStaff, staff]);
+      setNewStaff({ name: '', location: '', status: 'Active', role: '' });
+      setIsAddingStaff(false);
+    }
+  };
+
+  const handleRemoveStaff = (id: string) => {
+    setConnectedStaff(connectedStaff.filter(staff => staff.id !== id));
+  };
+
+  const handleStatusChange = (id: string, newStatus: 'Active' | 'Standby' | 'Offline') => {
+    setConnectedStaff(connectedStaff.map(staff => 
+      staff.id === id 
+        ? { ...staff, status: newStatus, lastUpdate: 'Just now' }
+        : staff
+    ));
+  };
 
   return (
     <div className="p-6 space-y-6 bg-white min-h-screen">
@@ -23,7 +74,7 @@ export const MobileStaffApp = () => {
         </div>
         <Badge variant="outline" className="border-green-500 text-green-600 bg-green-50">
           <Smartphone className="w-4 h-4 mr-1" />
-          {staffConnected} Staff Connected
+          {connectedStaff.length} Staff Connected
         </Badge>
       </div>
 
@@ -85,22 +136,97 @@ export const MobileStaffApp = () => {
 
       {/* Connected Staff Status */}
       <Card className="bg-white border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Connected Staff</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            { name: 'Security Team Alpha', location: 'Main Gate', status: 'Active', lastUpdate: '2 min ago' },
-            { name: 'Medical Unit 1', location: 'Food Court', status: 'Standby', lastUpdate: '5 min ago' },
-            { name: 'Safety Officer Mike', location: 'VIP Area', status: 'Active', lastUpdate: '1 min ago' },
-          ].map((staff, index) => (
-            <div key={index} className="p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-medium text-gray-900">{staff.name}</h4>
-                <Badge className={staff.status === 'Active' ? 'bg-green-500' : 'bg-yellow-500'} variant="outline">
-                  {staff.status}
-                </Badge>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <User className="w-5 h-5" />
+            Connected Staff Management
+          </h3>
+          <Dialog open={isAddingStaff} onOpenChange={setIsAddingStaff}>
+            <DialogTrigger asChild>
+              <Button className="bg-green-600 hover:bg-green-700">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Staff
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Staff Member</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <Input
+                  placeholder="Staff Name"
+                  value={newStaff.name}
+                  onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
+                />
+                <Input
+                  placeholder="Location"
+                  value={newStaff.location}
+                  onChange={(e) => setNewStaff({ ...newStaff, location: e.target.value })}
+                />
+                <Input
+                  placeholder="Role (e.g., Security, Medical, Safety)"
+                  value={newStaff.role}
+                  onChange={(e) => setNewStaff({ ...newStaff, role: e.target.value })}
+                />
+                <Select value={newStaff.status} onValueChange={(value: 'Active' | 'Standby' | 'Offline') => setNewStaff({ ...newStaff, status: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Standby">Standby</SelectItem>
+                    <SelectItem value="Offline">Offline</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-2">
+                  <Button onClick={handleAddStaff} className="flex-1">Add Staff</Button>
+                  <Button variant="outline" onClick={() => setIsAddingStaff(false)} className="flex-1">Cancel</Button>
+                </div>
               </div>
-              <p className="text-sm text-gray-600">{staff.location}</p>
-              <p className="text-xs text-gray-500">Updated {staff.lastUpdate}</p>
+            </DialogContent>
+          </Dialog>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {connectedStaff.map((staff) => (
+            <div key={staff.id} className="p-4 bg-gray-50 rounded-lg relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleRemoveStaff(staff.id)}
+                className="absolute top-2 right-2 h-6 w-6 p-0 text-red-500 hover:text-red-700"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+              
+              <div className="flex items-center justify-between mb-2 pr-8">
+                <h4 className="font-medium text-gray-900">{staff.name}</h4>
+                <Select value={staff.status} onValueChange={(value: 'Active' | 'Standby' | 'Offline') => handleStatusChange(staff.id, value)}>
+                  <SelectTrigger className="w-20 h-6 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Standby">Standby</SelectItem>
+                    <SelectItem value="Offline">Offline</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-1">
+                <p className="text-sm text-gray-600 flex items-center gap-1">
+                  <MapPin className="w-3 h-3" />
+                  {staff.location}
+                </p>
+                <p className="text-sm text-gray-600 flex items-center gap-1">
+                  <User className="w-3 h-3" />
+                  {staff.role}
+                </p>
+                <p className="text-xs text-gray-500 flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  Updated {staff.lastUpdate}
+                </p>
+              </div>
             </div>
           ))}
         </div>
