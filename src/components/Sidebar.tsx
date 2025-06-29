@@ -3,7 +3,6 @@ import React from 'react';
 import { 
   Camera, 
   Users, 
-  Search, 
   Settings, 
   Bell,
   Map,
@@ -11,7 +10,6 @@ import {
   Brain,
   Eye,
   UserSearch,
-  MessageSquare,
   Smartphone
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -29,11 +27,10 @@ const menuItems = [
   { id: 'crowd', label: 'Crowd Analysis', icon: Users },
   { id: 'incidents', label: 'Incidents', icon: Bell },
   { id: 'bottleneck', label: 'Bottleneck Analysis', icon: TrendingUp },
-  { id: 'summaries', label: 'AI Summaries', icon: MessageSquare },
+  { id: 'search', label: 'AI Assistant', icon: Brain },
   { id: 'anomaly', label: 'Anomaly Detection', icon: Eye },
   { id: 'lost-found', label: 'Lost & Found', icon: UserSearch },
   { id: 'mobile', label: 'Mobile Staff App', icon: Smartphone },
-  { id: 'search', label: 'AI Search', icon: Search },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 

@@ -3,10 +3,9 @@ import React from 'react';
 import { VideoFeeds } from '@/components/views/VideoFeeds';
 import { CrowdAnalysis } from '@/components/views/CrowdAnalysis';
 import { IncidentManagement } from '@/components/views/IncidentManagement';
-import { AISearch } from '@/components/views/AISearch';
+import { AIInterface } from '@/components/views/AIInterface';
 import { Settings } from '@/components/views/Settings';
 import { BottleneckAnalysis } from '@/components/views/BottleneckAnalysis';
-import { SituationalSummaries } from '@/components/views/SituationalSummaries';
 import { AnomalyDetection } from '@/components/views/AnomalyDetection';
 import { LostAndFound } from '@/components/views/LostAndFound';
 import { MobileStaffApp } from '@/components/MobileStaffApp';
@@ -25,13 +24,12 @@ export const MainContent = ({ selectedView }: MainContentProps) => {
       case 'incidents':
         return <IncidentManagement />;
       case 'search':
-        return <AISearch />;
+      case 'summaries':
+        return <AIInterface />;
       case 'settings':
         return <Settings />;
       case 'bottleneck':
         return <BottleneckAnalysis />;
-      case 'summaries':
-        return <SituationalSummaries />;
       case 'anomaly':
         return <AnomalyDetection />;
       case 'lost-found':
