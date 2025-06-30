@@ -93,7 +93,7 @@ export const WebRTCPlayer = ({
     }
 
     try {
-      webrtcService.playStream(streamId, videoRef.current || undefined);
+      webrtcService.playStream(streamId);
     } catch (error) {
       console.error('Failed to start playing:', error);
       toast.error('Failed to play stream');
