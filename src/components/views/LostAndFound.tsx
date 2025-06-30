@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,7 +28,7 @@ export const LostAndFound = () => {
   const [lostPersons, setLostPersons] = useState<LostPerson[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // File input refs to prevent global triggering
+  // Unique refs for each file input to prevent global triggering
   const lostPersonFileRef = useRef<HTMLInputElement>(null);
   const crowdFootageFileRef = useRef<HTMLInputElement>(null);
   const reportPhotoFileRef = useRef<HTMLInputElement>(null);
@@ -77,6 +76,7 @@ export const LostAndFound = () => {
   }, []);
 
   const handleLostPersonPhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    event.stopPropagation();
     const file = event.target.files?.[0];
     if (file) {
       setLostPersonPhoto(file);
@@ -85,6 +85,7 @@ export const LostAndFound = () => {
   };
 
   const handleCrowdFootageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    event.stopPropagation();
     const file = event.target.files?.[0];
     if (file) {
       setCrowdFootage(file);
@@ -93,6 +94,7 @@ export const LostAndFound = () => {
   };
 
   const handleReportPhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    event.stopPropagation();
     const file = event.target.files?.[0];
     if (file) {
       setNewReport(prev => ({ ...prev, photo: file }));
@@ -405,13 +407,14 @@ export const LostAndFound = () => {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Upload Photo</label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center relative">
                 <input 
                   ref={reportPhotoFileRef}
                   type="file" 
                   accept="image/*" 
                   onChange={handleReportPhotoUpload}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  onClick={(e) => e.stopPropagation()}
                 />
                 <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
                 <p className="text-gray-600">
@@ -419,7 +422,7 @@ export const LostAndFound = () => {
                 </p>
               </div>
             </div>
-            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+            <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white">
               Submit Missing Person Report
             </Button>
           </form>
@@ -448,7 +451,8 @@ export const LostAndFound = () => {
                         type="file"
                         accept="image/*"
                         onChange={handleLostPersonPhotoUpload}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                        onClick={(e) => e.stopPropagation()}
                       />
                       <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 text-center">
                         <span className="text-blue-700">
@@ -468,7 +472,8 @@ export const LostAndFound = () => {
                         type="file"
                         accept="video/*,image/*"
                         onChange={handleCrowdFootageUpload}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                        onClick={(e) => e.stopPropagation()}
                       />
                       <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 text-center">
                         <span className="text-blue-700">
@@ -481,7 +486,7 @@ export const LostAndFound = () => {
                   <Button
                     onClick={handleFindPerson}
                     disabled={isSearching || !lostPersonPhoto || !crowdFootage}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg"
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-lg"
                   >
                     {isSearching ? 'Searching...' : 'Find Person'}
                   </Button>
