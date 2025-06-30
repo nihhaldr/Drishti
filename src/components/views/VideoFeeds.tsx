@@ -4,9 +4,11 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Camera, Settings, AlertTriangle, CheckCircle, Plus, Trash2, Edit, Grid3X3, Monitor } from 'lucide-react';
+import { Camera, Settings, AlertTriangle, CheckCircle, Plus, Trash2, Edit, Grid3X3, Monitor, Radio } from 'lucide-react';
 import { toast } from 'sonner';
 import { VideoPlayer } from '@/components/VideoPlayer';
+import { WebRTCPlayer } from '@/components/WebRTCPlayer';
+import { WebRTCPublisher } from '@/components/WebRTCPublisher';
 
 interface CameraFeed {
   id: number;
@@ -16,6 +18,8 @@ interface CameraFeed {
   location: string;
   alerts: number;
   streamUrl?: string;
+  streamId?: string;
+  isWebRTC?: boolean;
   isRecording?: boolean;
 }
 
@@ -45,10 +49,14 @@ export const VideoFeeds = () => {
   const [editingFeed, setEditingFeed] = useState<CameraFeed | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'single'>('grid');
   const [selectedFeed, setSelectedFeed] = useState<CameraFeed | null>(null);
+  const [showPublisher, setShowPublisher] = useState(false);
+  const [webrtcServerUrl, setWebrtcServerUrl] = useState('wss://localhost:5443/WebRTCAppEE/websocket');
   const [newFeed, setNewFeed] = useState({
     name: '',
     location: '',
-    streamUrl: ''
+    streamUrl: '',
+    streamId: '',
+    isWebRTC: false
   });
 
   const updateFeedStatus = (feedId: number, status: CameraFeed['status']) => {
@@ -67,13 +75,15 @@ export const VideoFeeds = () => {
         id: Date.now(),
         name: newFeed.name,
         location: newFeed.location,
-        streamUrl: newFeed.streamUrl || undefined,
+        streamUrl: newFeed.isWebRTC ? undefined : newFeed.streamUrl || undefined,
+        streamId: newFeed.isWebRTC ? newFeed.streamId : undefined,
+        isWebRTC: newFeed.isWebRTC,
         status: 'offline',
         viewers: 0,
         alerts: 0
       };
       setFeeds([...feeds, feed]);
-      setNewFeed({ name: '', location: '', streamUrl: '' });
+      setNewFeed({ name: '', location: '', streamUrl: '', streamId: '', isWebRTC: false });
       setIsAddDialogOpen(false);
       toast.success('Camera feed added successfully');
     } else {
@@ -86,7 +96,9 @@ export const VideoFeeds = () => {
     setNewFeed({
       name: feed.name,
       location: feed.location,
-      streamUrl: feed.streamUrl || ''
+      streamUrl: feed.streamUrl || '',
+      streamId: feed.streamId || '',
+      isWebRTC: feed.isWebRTC || false
     });
   };
 
@@ -94,11 +106,18 @@ export const VideoFeeds = () => {
     if (editingFeed && newFeed.name && newFeed.location) {
       setFeeds(feeds.map(feed => 
         feed.id === editingFeed.id 
-          ? { ...feed, name: newFeed.name, location: newFeed.location, streamUrl: newFeed.streamUrl || undefined }
+          ? { 
+              ...feed, 
+              name: newFeed.name, 
+              location: newFeed.location, 
+              streamUrl: newFeed.isWebRTC ? undefined : newFeed.streamUrl || undefined,
+              streamId: newFeed.isWebRTC ? newFeed.streamId : undefined,
+              isWebRTC: newFeed.isWebRTC
+            }
           : feed
       ));
       setEditingFeed(null);
-      setNewFeed({ name: '', location: '', streamUrl: '' });
+      setNewFeed({ name: '', location: '', streamUrl: '', streamId: '', isWebRTC: false });
       toast.success('Camera feed updated successfully');
     } else {
       toast.error('Please fill in camera name and location');
@@ -111,7 +130,7 @@ export const VideoFeeds = () => {
   };
 
   const resetForm = () => {
-    setNewFeed({ name: '', location: '', streamUrl: '' });
+    setNewFeed({ name: '', location: '', streamUrl: '', streamId: '', isWebRTC: false });
     setEditingFeed(null);
   };
 
@@ -138,7 +157,7 @@ export const VideoFeeds = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-foreground">Video Surveillance</h1>
-          <p className="text-sm text-muted-foreground">Live camera feeds across the venue</p>
+          <p className="text-sm text-muted-foreground">Live camera feeds and WebRTC streaming</p>
         </div>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -169,17 +188,38 @@ export const VideoFeeds = () => {
                     placeholder="e.g., North Gate"
                   />
                 </div>
-                <div>
-                  <label className="text-sm font-medium block mb-1">Stream URL</label>
-                  <Input
-                    value={newFeed.streamUrl}
-                    onChange={(e) => setNewFeed({ ...newFeed, streamUrl: e.target.value })}
-                    placeholder="rtsp://192.168.1.100:554/stream or http://..."
+                <div className="flex items-center gap-2 mb-3">
+                  <input
+                    type="checkbox"
+                    id="isWebRTC"
+                    checked={newFeed.isWebRTC}
+                    onChange={(e) => setNewFeed({ ...newFeed, isWebRTC: e.target.checked })}
+                    className="rounded"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Supports RTSP, HTTP, HLS, MJPEG streams
-                  </p>
+                  <label htmlFor="isWebRTC" className="text-sm font-medium">Use WebRTC Stream</label>
                 </div>
+                {newFeed.isWebRTC ? (
+                  <div>
+                    <label className="text-sm font-medium block mb-1">WebRTC Stream ID</label>
+                    <Input
+                      value={newFeed.streamId}
+                      onChange={(e) => setNewFeed({ ...newFeed, streamId: e.target.value })}
+                      placeholder="Enter WebRTC stream ID"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Stream URL</label>
+                    <Input
+                      value={newFeed.streamUrl}
+                      onChange={(e) => setNewFeed({ ...newFeed, streamUrl: e.target.value })}
+                      placeholder="rtsp://192.168.1.100:554/stream or http://..."
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Supports RTSP, HTTP, HLS, MJPEG streams
+                    </p>
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <Button onClick={handleAddFeed} className="flex-1">
                     Add Camera
@@ -192,47 +232,14 @@ export const VideoFeeds = () => {
             </DialogContent>
           </Dialog>
 
-          <Dialog open={!!editingFeed} onOpenChange={() => setEditingFeed(null)}>
-            <DialogContent className="w-[95vw] max-w-md">
-              <DialogHeader>
-                <DialogTitle>Edit Camera Feed</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium block mb-1">Camera Name</label>
-                  <Input
-                    value={newFeed.name}
-                    onChange={(e) => setNewFeed({ ...newFeed, name: e.target.value })}
-                    placeholder="e.g., Main Entrance"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block mb-1">Location</label>
-                  <Input
-                    value={newFeed.location}
-                    onChange={(e) => setNewFeed({ ...newFeed, location: e.target.value })}
-                    placeholder="e.g., North Gate"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block mb-1">Stream URL</label>
-                  <Input
-                    value={newFeed.streamUrl}
-                    onChange={(e) => setNewFeed({ ...newFeed, streamUrl: e.target.value })}
-                    placeholder="rtsp://192.168.1.100:554/stream or http://..."
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={handleUpdateFeed} className="flex-1">
-                    Update Camera
-                  </Button>
-                  <Button variant="outline" onClick={resetForm}>
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button
+            onClick={() => setShowPublisher(!showPublisher)}
+            variant={showPublisher ? 'default' : 'outline'}
+            className="flex-1 sm:flex-none"
+          >
+            <Radio className="w-4 h-4 mr-2" />
+            Publisher
+          </Button>
 
           <div className="flex gap-2 flex-1 sm:flex-none">
             <Button 
@@ -257,6 +264,104 @@ export const VideoFeeds = () => {
         </div>
       </div>
 
+      {/* WebRTC Server Configuration */}
+      <div className="mb-4">
+        <Card className="p-4">
+          <div className="flex items-center gap-4">
+            <label className="text-sm font-medium">WebRTC Server URL:</label>
+            <Input
+              value={webrtcServerUrl}
+              onChange={(e) => setWebrtcServerUrl(e.target.value)}
+              placeholder="wss://your-antmedia-server:5443/WebRTCAppEE/websocket"
+              className="flex-1"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Configure your Ant Media Server WebSocket endpoint for WebRTC streaming
+          </p>
+        </Card>
+      </div>
+
+      {/* WebRTC Publisher */}
+      {showPublisher && (
+        <div className="mb-6">
+          <WebRTCPublisher 
+            serverUrl={webrtcServerUrl}
+            onStreamStarted={(streamId) => {
+              console.log('Stream started:', streamId);
+              toast.success(`Publishing stream: ${streamId}`);
+            }}
+            onStreamStopped={(streamId) => {
+              console.log('Stream stopped:', streamId);
+            }}
+          />
+        </div>
+      )}
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingFeed} onOpenChange={() => setEditingFeed(null)}>
+        <DialogContent className="w-[95vw] max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Camera Feed</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium block mb-1">Camera Name</label>
+              <Input
+                value={newFeed.name}
+                onChange={(e) => setNewFeed({ ...newFeed, name: e.target.value })}
+                placeholder="e.g., Main Entrance"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium block mb-1">Location</label>
+              <Input
+                value={newFeed.location}
+                onChange={(e) => setNewFeed({ ...newFeed, location: e.target.value })}
+                placeholder="e.g., North Gate"
+              />
+            </div>
+            <div className="flex items-center gap-2 mb-3">
+              <input
+                type="checkbox"
+                id="editIsWebRTC"
+                checked={newFeed.isWebRTC}
+                onChange={(e) => setNewFeed({ ...newFeed, isWebRTC: e.target.checked })}
+                className="rounded"
+              />
+              <label htmlFor="editIsWebRTC" className="text-sm font-medium">Use WebRTC Stream</label>
+            </div>
+            {newFeed.isWebRTC ? (
+              <div>
+                <label className="text-sm font-medium block mb-1">WebRTC Stream ID</label>
+                <Input
+                  value={newFeed.streamId}
+                  onChange={(e) => setNewFeed({ ...newFeed, streamId: e.target.value })}
+                  placeholder="Enter WebRTC stream ID"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="text-sm font-medium block mb-1">Stream URL</label>
+                <Input
+                  value={newFeed.streamUrl}
+                  onChange={(e) => setNewFeed({ ...newFeed, streamUrl: e.target.value })}
+                  placeholder="rtsp://192.168.1.100:554/stream or http://..."
+                />
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button onClick={handleUpdateFeed} className="flex-1">
+                Update Camera
+              </Button>
+              <Button variant="outline" onClick={resetForm}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Full Screen Video Dialog */}
       <Dialog open={!!selectedFeed} onOpenChange={() => setSelectedFeed(null)}>
         <DialogContent className="max-w-[95vw] w-full h-[85vh] max-h-[85vh]">
@@ -267,11 +372,21 @@ export const VideoFeeds = () => {
           </DialogHeader>
           <div className="flex-1 relative min-h-0">
             {selectedFeed && (
-              <VideoPlayer 
-                feed={selectedFeed} 
-                isFullView={true}
-                onStatusChange={updateFeedStatus}
-              />
+              selectedFeed.isWebRTC ? (
+                <WebRTCPlayer
+                  serverUrl={webrtcServerUrl}
+                  streamId={selectedFeed.streamId}
+                  autoPlay={true}
+                  onPlayStarted={(id) => updateFeedStatus(selectedFeed.id, 'live')}
+                  onPlayStopped={(id) => updateFeedStatus(selectedFeed.id, 'offline')}
+                />
+              ) : (
+                <VideoPlayer 
+                  feed={selectedFeed} 
+                  isFullView={true}
+                  onStatusChange={updateFeedStatus}
+                />
+              )
             )}
           </div>
         </DialogContent>
@@ -298,11 +413,21 @@ export const VideoFeeds = () => {
               <div className={`bg-black relative ${
                 viewMode === 'single' ? 'aspect-video' : 'aspect-video'
               }`}>
-                <VideoPlayer 
-                  feed={feed} 
-                  onStatusChange={updateFeedStatus}
-                  onFullscreen={handleFullscreen}
-                />
+                {feed.isWebRTC ? (
+                  <WebRTCPlayer
+                    serverUrl={webrtcServerUrl}
+                    streamId={feed.streamId}
+                    onPlayStarted={(id) => updateFeedStatus(feed.id, 'live')}
+                    onPlayStopped={(id) => updateFeedStatus(feed.id, 'offline')}
+                    onFullscreen={() => handleFullscreen(feed)}
+                  />
+                ) : (
+                  <VideoPlayer 
+                    feed={feed} 
+                    onStatusChange={updateFeedStatus}
+                    onFullscreen={handleFullscreen}
+                  />
+                )}
                 
                 {/* Status Badge */}
                 <div className="absolute top-2 sm:top-3 left-2 sm:left-3 flex items-center gap-2">
@@ -310,7 +435,7 @@ export const VideoFeeds = () => {
                     feed.status === 'live' ? 'animate-pulse' : ''
                   }`}></div>
                   <span className="text-white text-xs font-medium bg-black/70 px-2 py-1 rounded backdrop-blur">
-                    {getStatusText(feed.status)}
+                    {getStatusText(feed.status)} {feed.isWebRTC && <Radio className="w-3 h-3 inline ml-1" />}
                   </span>
                 </div>
 
@@ -343,19 +468,6 @@ export const VideoFeeds = () => {
                     <Trash2 className="w-3 h-3" />
                   </Button>
                 </div>
-
-                {/* Camera Info */}
-                <div className="absolute bottom-2 sm:bottom-3 left-2 sm:left-3 right-2 sm:right-3">
-                  <div className="bg-black/70 backdrop-blur rounded p-2">
-                    <h3 className="text-white font-medium text-sm">{feed.name}</h3>
-                    <p className="text-white/80 text-xs">{feed.location}</p>
-                    {feed.streamUrl && (
-                      <p className="text-white/60 text-xs truncate">
-                        {feed.streamUrl}
-                      </p>
-                    )}
-                  </div>
-                </div>
               </div>
 
               <div className="p-3 sm:p-4">
@@ -367,7 +479,7 @@ export const VideoFeeds = () => {
                       'text-gray-400'
                     }`} />
                     <span className="text-sm text-muted-foreground capitalize">
-                      {feed.status}
+                      {feed.status} {feed.isWebRTC && '(WebRTC)'}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
