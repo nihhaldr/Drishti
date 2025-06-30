@@ -93,11 +93,11 @@ export class WebRTCService {
     this.adaptor.publish(streamId);
   }
 
-  playStream(streamId: string, videoElement?: HTMLVideoElement): void {
+  playStream(streamId: string): void {
     if (!this.adaptor) {
       throw new Error('WebRTC adaptor not initialized');
     }
-    this.adaptor.play(streamId, undefined, undefined, videoElement);
+    this.adaptor.play(streamId);
   }
 
   stopPublishing(streamId: string): void {
