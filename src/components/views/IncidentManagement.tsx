@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,49 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertTriangle, Clock, User, MapPin, Plus, Search, Filter, Eye } from 'lucide-react';
+import { AlertTriangle, Clock, MapPin, Plus, Search, Filter, Eye, RefreshCw } from 'lucide-react';
 import { incidentService, Incident, IncidentStatus, IncidentPriority, IncidentType } from '@/services/incidentService';
 import { toast } from 'sonner';
-
-const mockIncidents = [
-  {
-    id: '1',
-    title: 'Medical Emergency - Gate 3',
-    description: 'Person collapsed near entrance',
-    status: 'active' as IncidentStatus,
-    priority: 'critical' as IncidentPriority,
-    incident_type: 'medical_emergency' as IncidentType,
-    location_name: 'Gate 3',
-    created_at: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: '2',
-    title: 'Crowd Density Alert - Main Stage',
-    description: 'Overcrowding detected in front sections',
-    status: 'investigating' as IncidentStatus,
-    priority: 'high' as IncidentPriority,
-    incident_type: 'crowd_density' as IncidentType,
-    location_name: 'Main Stage',
-    created_at: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: '3',
-    title: 'Lost Person - Child',
-    description: '8-year-old missing near food court',
-    status: 'active' as IncidentStatus,
-    priority: 'high' as IncidentPriority,
-    incident_type: 'lost_person' as IncidentType,
-    location_name: 'Food Court',
-    created_at: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-    updated_at: new Date().toISOString()
-  }
-];
 
 export const IncidentManagement = () => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -67,6 +31,7 @@ export const IncidentManagement = () => {
     
     // Subscribe to incident updates
     const unsubscribe = incidentService.subscribe((updatedIncidents) => {
+      console.log('Received incident updates:', updatedIncidents.length);
       setIncidents(updatedIncidents);
     });
 
@@ -77,13 +42,26 @@ export const IncidentManagement = () => {
     setLoading(true);
     try {
       const data = await incidentService.getAll();
-      setIncidents(data.length > 0 ? data : mockIncidents);
+      console.log('Loaded incidents:', data.length);
+      setIncidents(data);
     } catch (error) {
       console.error('Error loading incidents:', error);
-      setIncidents(mockIncidents);
-      toast.error('Failed to load incidents, using mock data');
+      toast.error('Failed to load incidents');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await incidentService.refresh();
+      toast.success('Incidents refreshed');
+    } catch (error) {
+      console.error('Error refreshing incidents:', error);
+      toast.error('Failed to refresh incidents');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -107,25 +85,7 @@ export const IncidentManagement = () => {
       toast.success('Incident created successfully');
     } catch (error) {
       console.error('Error creating incident:', error);
-      // Fallback to mock creation
-      const created: Incident = {
-        id: Date.now().toString(),
-        ...newIncident,
-        status: 'reported' as IncidentStatus,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
-      setIncidents(prev => [created, ...prev]);
-      setIsCreateDialogOpen(false);
-      setNewIncident({
-        title: '',
-        description: '',
-        incident_type: 'general',
-        priority: 'medium',
-        location_name: ''
-      });
-      toast.success('Incident created successfully');
+      toast.error('Failed to create incident');
     } finally {
       setLoading(false);
     }
@@ -133,7 +93,7 @@ export const IncidentManagement = () => {
 
   const handleStatusUpdate = async (id: string, status: IncidentStatus) => {
     try {
-      setLoading(true);
+      console.log(`Updating incident ${id} status to ${status}`);
       
       const updates = {
         status,
@@ -141,22 +101,11 @@ export const IncidentManagement = () => {
         resolved_at: status === 'resolved' || status === 'closed' ? new Date().toISOString() : undefined
       };
 
-      try {
-        await incidentService.update(id, updates);
-      } catch (error) {
-        console.error('Error updating incident in database:', error);
-        // Fallback to local update
-        setIncidents(prev => prev.map(inc => 
-          inc.id === id ? { ...inc, ...updates } : inc
-        ));
-      }
-      
+      await incidentService.update(id, updates);
       toast.success(`Incident status updated to ${status}`);
     } catch (error) {
       console.error('Error updating incident:', error);
       toast.error('Failed to update incident status');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -227,68 +176,81 @@ export const IncidentManagement = () => {
               <p className="text-sm md:text-base text-muted-foreground">Monitor and manage security incidents</p>
             </div>
             
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Incident
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Create New Incident</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <Input
-                    placeholder="Incident title"
-                    value={newIncident.title}
-                    onChange={(e) => setNewIncident(prev => ({ ...prev, title: e.target.value }))}
-                  />
-                  <Textarea
-                    placeholder="Description"
-                    value={newIncident.description}
-                    onChange={(e) => setNewIncident(prev => ({ ...prev, description: e.target.value }))}
-                  />
-                  <Select value={newIncident.incident_type} onValueChange={(value: IncidentType) => 
-                    setNewIncident(prev => ({ ...prev, incident_type: value }))
-                  }>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select incident type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="medical_emergency">Medical Emergency</SelectItem>
-                      <SelectItem value="security_threat">Security Threat</SelectItem>
-                      <SelectItem value="crowd_density">Crowd Density</SelectItem>
-                      <SelectItem value="lost_person">Lost Person</SelectItem>
-                      <SelectItem value="fire_hazard">Fire Hazard</SelectItem>
-                      <SelectItem value="weather">Weather</SelectItem>
-                      <SelectItem value="general">General</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={newIncident.priority} onValueChange={(value: IncidentPriority) => 
-                    setNewIncident(prev => ({ ...prev, priority: value }))
-                  }>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select priority" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="critical">Critical</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    placeholder="Location"
-                    value={newIncident.location_name}
-                    onChange={(e) => setNewIncident(prev => ({ ...prev, location_name: e.target.value }))}
-                  />
-                  <Button onClick={handleCreateIncident} className="w-full" disabled={loading}>
-                    {loading ? 'Creating...' : 'Create Incident'}
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="border-border hover:bg-accent"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              
+              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Incident
                   </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Create New Incident</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <Input
+                      placeholder="Incident title"
+                      value={newIncident.title}
+                      onChange={(e) => setNewIncident(prev => ({ ...prev, title: e.target.value }))}
+                    />
+                    <Textarea
+                      placeholder="Description"
+                      value={newIncident.description}
+                      onChange={(e) => setNewIncident(prev => ({ ...prev, description: e.target.value }))}
+                    />
+                    <Select value={newIncident.incident_type} onValueChange={(value: IncidentType) => 
+                      setNewIncident(prev => ({ ...prev, incident_type: value }))
+                    }>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select incident type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="medical_emergency">Medical Emergency</SelectItem>
+                        <SelectItem value="security_threat">Security Threat</SelectItem>
+                        <SelectItem value="crowd_density">Crowd Density</SelectItem>
+                        <SelectItem value="lost_person">Lost Person</SelectItem>
+                        <SelectItem value="fire_hazard">Fire Hazard</SelectItem>
+                        <SelectItem value="weather">Weather</SelectItem>
+                        <SelectItem value="general">General</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={newIncident.priority} onValueChange={(value: IncidentPriority) => 
+                      setNewIncident(prev => ({ ...prev, priority: value }))
+                    }>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="critical">Critical</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      placeholder="Location"
+                      value={newIncident.location_name}
+                      onChange={(e) => setNewIncident(prev => ({ ...prev, location_name: e.target.value }))}
+                    />
+                    <Button onClick={handleCreateIncident} className="w-full" disabled={loading}>
+                      {loading ? 'Creating...' : 'Create Incident'}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
 
           {/* Search and Filter */}

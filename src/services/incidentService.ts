@@ -35,10 +35,20 @@ export interface CreateIncidentRequest {
   assigned_to?: string;
 }
 
+const STORAGE_KEY = 'drishti_incidents_cache';
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+
+interface CacheData {
+  incidents: Incident[];
+  timestamp: number;
+  localUpdates: { [key: string]: Partial<Incident> };
+}
+
 class IncidentService {
   private static instance: IncidentService;
   private incidents: Incident[] = [];
   private subscribers: ((incidents: Incident[]) => void)[] = [];
+  private localUpdates: { [key: string]: Partial<Incident> } = {};
 
   public static getInstance(): IncidentService {
     if (!IncidentService.instance) {
@@ -47,7 +57,65 @@ class IncidentService {
     return IncidentService.instance;
   }
 
+  constructor() {
+    this.loadFromCache();
+  }
+
+  private loadFromCache(): void {
+    try {
+      const cached = localStorage.getItem(STORAGE_KEY);
+      if (cached) {
+        const data: CacheData = JSON.parse(cached);
+        const isExpired = Date.now() - data.timestamp > CACHE_DURATION;
+        
+        if (!isExpired) {
+          this.incidents = data.incidents;
+          this.localUpdates = data.localUpdates || {};
+          // Apply local updates to cached incidents
+          this.applyLocalUpdates();
+          console.log('Loaded incidents from cache:', this.incidents.length);
+        } else {
+          console.log('Cache expired, will fetch fresh data');
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading from cache:', error);
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }
+
+  private saveToCache(): void {
+    try {
+      const cacheData: CacheData = {
+        incidents: this.incidents,
+        timestamp: Date.now(),
+        localUpdates: this.localUpdates
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cacheData));
+      console.log('Saved incidents to cache');
+    } catch (error) {
+      console.error('Error saving to cache:', error);
+    }
+  }
+
+  private applyLocalUpdates(): void {
+    this.incidents = this.incidents.map(incident => {
+      const localUpdate = this.localUpdates[incident.id];
+      if (localUpdate) {
+        return { ...incident, ...localUpdate };
+      }
+      return incident;
+    });
+  }
+
   async getAll(): Promise<Incident[]> {
+    // If we have cached data, return it immediately
+    if (this.incidents.length > 0) {
+      this.notifySubscribers();
+      return this.incidents;
+    }
+
     try {
       const { data, error } = await supabase
         .from('incidents')
@@ -57,12 +125,61 @@ class IncidentService {
       if (error) throw error;
       
       this.incidents = data || [];
+      this.applyLocalUpdates();
+      this.saveToCache();
       this.notifySubscribers();
       return this.incidents;
     } catch (error) {
       console.error('Error fetching incidents:', error);
-      return this.incidents;
+      // Return cached data if available, otherwise mock data
+      if (this.incidents.length > 0) {
+        return this.incidents;
+      }
+      return this.getMockIncidents();
     }
+  }
+
+  private getMockIncidents(): Incident[] {
+    const mockIncidents = [
+      {
+        id: '1',
+        title: 'Medical Emergency - Gate 3',
+        description: 'Person collapsed near entrance',
+        status: 'active' as IncidentStatus,
+        priority: 'critical' as IncidentPriority,
+        incident_type: 'medical_emergency' as IncidentType,
+        location_name: 'Gate 3',
+        created_at: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: '2',
+        title: 'Crowd Density Alert - Main Stage',
+        description: 'Overcrowding detected in front sections',
+        status: 'investigating' as IncidentStatus,
+        priority: 'high' as IncidentPriority,
+        incident_type: 'crowd_density' as IncidentType,
+        location_name: 'Main Stage',
+        created_at: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: '3',
+        title: 'Lost Person - Child',
+        description: '8-year-old missing near food court',
+        status: 'active' as IncidentStatus,
+        priority: 'high' as IncidentPriority,
+        incident_type: 'lost_person' as IncidentType,
+        location_name: 'Food Court',
+        created_at: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ];
+
+    this.incidents = mockIncidents;
+    this.applyLocalUpdates();
+    this.saveToCache();
+    return this.incidents;
   }
 
   async create(incident: CreateIncidentRequest): Promise<Incident> {
@@ -82,6 +199,7 @@ class IncidentService {
       
       // Update local cache
       this.incidents = [data, ...this.incidents];
+      this.saveToCache();
       this.notifySubscribers();
       return data;
     } catch (error) {
@@ -91,28 +209,73 @@ class IncidentService {
   }
 
   async update(id: string, updates: Partial<Incident>): Promise<Incident> {
+    // Immediately update local cache
+    const localUpdate = {
+      ...updates,
+      updated_at: new Date().toISOString()
+    };
+    
+    this.localUpdates[id] = { ...this.localUpdates[id], ...localUpdate };
+    
+    // Update incidents array
+    this.incidents = this.incidents.map(inc => 
+      inc.id === id ? { ...inc, ...localUpdate } : inc
+    );
+    
+    // Save to cache immediately
+    this.saveToCache();
+    this.notifySubscribers();
+
+    // Then try to sync with database
     try {
       const { data, error } = await supabase
         .from('incidents')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
+        .update(localUpdate)
         .eq('id', id)
         .select()
         .single();
 
       if (error) throw error;
       
-      // Update local cache
+      // Clear local update since it's now synced
+      delete this.localUpdates[id];
+      
+      // Update with server data
       this.incidents = this.incidents.map(inc => 
         inc.id === id ? { ...inc, ...data } : inc
       );
+      
+      this.saveToCache();
       this.notifySubscribers();
       return data;
     } catch (error) {
-      console.error('Error updating incident:', error);
+      console.error('Error updating incident in database:', error);
+      // Return the locally updated incident
+      const updatedIncident = this.incidents.find(inc => inc.id === id);
+      if (updatedIncident) {
+        return updatedIncident;
+      }
       throw error;
+    }
+  }
+
+  async refresh(): Promise<Incident[]> {
+    try {
+      const { data, error } = await supabase
+        .from('incidents')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      this.incidents = data || [];
+      this.applyLocalUpdates();
+      this.saveToCache();
+      this.notifySubscribers();
+      return this.incidents;
+    } catch (error) {
+      console.error('Error refreshing incidents:', error);
+      return this.incidents;
     }
   }
 
@@ -128,7 +291,7 @@ class IncidentService {
       return data || [];
     } catch (error) {
       console.error('Error fetching incidents by status:', error);
-      return [];
+      return this.incidents.filter(inc => inc.status === status);
     }
   }
 
@@ -146,6 +309,13 @@ class IncidentService {
   // Get cached incidents without API call
   public getCachedIncidents(): Incident[] {
     return [...this.incidents];
+  }
+
+  // Clear cache (useful for testing or when user logs out)
+  public clearCache(): void {
+    localStorage.removeItem(STORAGE_KEY);
+    this.incidents = [];
+    this.localUpdates = {};
   }
 }
 

@@ -1,47 +1,37 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-interface RealtimeSubscription {
-  table: string;
-  event: 'INSERT' | 'UPDATE' | 'DELETE' | '*';
-  callback: (payload: any) => void;
-}
-
-export const useRealtime = (subscriptions: RealtimeSubscription[]) => {
-  const [isConnected, setIsConnected] = useState(false);
-
+export const useRealtime = () => {
   useEffect(() => {
-    const channels = subscriptions.map(({ table, event, callback }) => {
-      const channel = supabase
-        .channel(`${table}-changes`)
-        .on(
-          'postgres_changes',
-          {
-            event,
-            schema: 'public',
-            table
-          },
-          (payload) => {
-            console.log(`Realtime update on ${table}:`, payload);
-            callback(payload);
-          }
-        )
-        .subscribe((status) => {
-          console.log('Subscription status:', status);
-          setIsConnected(status === 'SUBSCRIBED');
-        });
-
-      return channel;
-    });
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'incidents'
+        },
+        (payload) => {
+          console.log('Incident change detected:', payload);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'lost_persons'
+        },
+        (payload) => {
+          console.log('Lost person change detected:', payload);
+        }
+      )
+      .subscribe();
 
     return () => {
-      channels.forEach(channel => {
-        supabase.removeChannel(channel);
-      });
-      setIsConnected(false);
+      supabase.removeChannel(channel);
     };
-  }, [subscriptions]);
-
-  return { isConnected };
+  }, []);
 };
