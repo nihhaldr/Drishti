@@ -15,7 +15,7 @@ export const useRealtime = (subscriptions?: RealtimeSubscription[]) => {
       const channel = supabase
         .channel('schema-db-changes')
         .on(
-          'postgres_changes',
+          'postgres_changes' as any,
           {
             event: '*',
             schema: 'public',
@@ -26,7 +26,7 @@ export const useRealtime = (subscriptions?: RealtimeSubscription[]) => {
           }
         )
         .on(
-          'postgres_changes',
+          'postgres_changes' as any,
           {
             event: '*',
             schema: 'public',
@@ -48,7 +48,7 @@ export const useRealtime = (subscriptions?: RealtimeSubscription[]) => {
     
     subscriptions.forEach(({ table, event, callback }) => {
       channel.on(
-        'postgres_changes',
+        'postgres_changes' as any,
         {
           event,
           schema: 'public',
