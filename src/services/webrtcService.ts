@@ -97,15 +97,7 @@ export class WebRTCService {
     if (!this.adaptor) {
       throw new Error('WebRTC adaptor not initialized');
     }
-    
-    // Store video element reference if provided for later use
-    if (videoElement) {
-      // The adaptor will handle video element binding internally
-      // We just need to call play with the stream ID
-      this.adaptor.play(streamId);
-    } else {
-      this.adaptor.play(streamId);
-    }
+    this.adaptor.play(streamId, undefined, undefined, videoElement);
   }
 
   stopPublishing(streamId: string): void {
