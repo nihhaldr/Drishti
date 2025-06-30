@@ -3,10 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Users, AlertTriangle, TrendingUp, Camera } from 'lucide-react';
+import { MapPin, Users, AlertTriangle, TrendingUp, Camera, Plus } from 'lucide-react';
 import { crowdService, CrowdMetric } from '@/services/crowdService';
 import { crowdDataService, LocationData } from '@/services/crowdDataService';
 import { useRealtime } from '@/hooks/useRealtime';
+import { toast } from 'sonner';
 
 interface MapLocation {
   id: string;
@@ -25,8 +26,8 @@ export const LiveEventMap = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [locations, setLocations] = useState<LocationData[]>([]);
 
-  // Map locations with positioning
-  const mapLocations: MapLocation[] = [
+  // Default map locations with positioning - these will be merged with manual data
+  const defaultMapLocations: MapLocation[] = [
     { id: '1', name: 'Main Stage', x: 50, y: 40, density: 85, riskLevel: 'high', capacity: 1000, cameras: 4 },
     { id: '2', name: 'Gate 3 Entrance', x: 20, y: 25, density: 65, riskLevel: 'medium', capacity: 500, cameras: 2 },
     { id: '3', name: 'Food Court', x: 70, y: 65, density: 45, riskLevel: 'low', capacity: 800, cameras: 3 },
@@ -42,6 +43,9 @@ export const LiveEventMap = () => {
     // Subscribe to changes
     const unsubscribe = crowdDataService.subscribe((newLocations) => {
       setLocations(newLocations);
+      if (newLocations.length > 0) {
+        toast.success('Map updated with new crowd data');
+      }
     });
 
     loadCrowdMetrics();
@@ -96,8 +100,43 @@ export const LiveEventMap = () => {
     return 'rgba(34, 197, 94, 0.5)'; // green
   };
 
-  const selectedLocationData = mapLocations.find(loc => loc.name === selectedLocation);
+  // Merge default locations with manual data
+  const mapLocations: MapLocation[] = defaultMapLocations.map(defaultLoc => {
+    const manualData = locations.find(loc => loc.name === defaultLoc.name);
+    if (manualData) {
+      return {
+        ...defaultLoc,
+        density: manualData.density,
+        riskLevel: getDensityRiskLevel(manualData.density),
+        capacity: manualData.capacity
+      };
+    }
+    return defaultLoc;
+  });
+
+  // Add any additional manual locations that don't match defaults
+  const additionalLocations = locations
+    .filter(loc => !defaultMapLocations.some(def => def.name === loc.name))
+    .map((loc, index) => ({
+      id: `manual-${index}`,
+      name: loc.name,
+      x: 30 + (index * 15), // Distribute new locations
+      y: 50 + (index * 10),
+      density: loc.density,
+      riskLevel: getDensityRiskLevel(loc.density),
+      capacity: loc.capacity,
+      cameras: 1
+    }));
+
+  const allMapLocations = [...mapLocations, ...additionalLocations];
+
+  const selectedLocationData = allMapLocations.find(loc => loc.name === selectedLocation);
   const actualLocationData = locations.find(loc => loc.name === selectedLocation);
+
+  const openCrowdAnalysis = () => {
+    // This would typically be handled by the parent component
+    toast.info('Navigate to Crowd Analysis section to add manual data');
+  };
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">
@@ -113,6 +152,11 @@ export const LiveEventMap = () => {
               <Badge className="bg-green-500 text-white">
                 Real-time Data
               </Badge>
+              {locations.length > 0 && (
+                <Badge variant="outline" className="border-blue-500 text-blue-600">
+                  {locations.length} Manual Inputs
+                </Badge>
+              )}
             </div>
           </div>
           
@@ -135,6 +179,14 @@ export const LiveEventMap = () => {
               <span>Critical Density (90%+)</span>
             </div>
           </div>
+
+          {locations.length === 0 && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-700">
+                📊 No manual crowd data available. Add crowd data in the Crowd Analysis section for more accurate mapping.
+              </p>
+            </div>
+          )}
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -146,7 +198,7 @@ export const LiveEventMap = () => {
               
               {/* Heatmap Overlay */}
               <svg className="absolute inset-0 w-full h-full">
-                {mapLocations.map((location) => {
+                {allMapLocations.map((location) => {
                   const actualLoc = locations.find(l => l.name === location.name);
                   const density = actualLoc?.density || location.density;
                   return (
@@ -163,10 +215,11 @@ export const LiveEventMap = () => {
               </svg>
 
               {/* Location Markers */}
-              {mapLocations.map((location) => {
+              {allMapLocations.map((location) => {
                 const actualLoc = locations.find(l => l.name === location.name);
                 const density = actualLoc?.density || location.density;
                 const riskLevel = getDensityRiskLevel(density);
+                const isManualData = !!actualLoc;
                 
                 return (
                   <div
@@ -177,10 +230,13 @@ export const LiveEventMap = () => {
                     style={{ left: `${location.x}%`, top: `${location.y}%` }}
                     onClick={() => setSelectedLocation(location.name)}
                   >
-                    <div className={`w-6 h-6 rounded-full border-2 ${getRiskColor(riskLevel)} shadow-lg`}>
+                    <div className={`w-6 h-6 rounded-full border-2 ${getRiskColor(riskLevel)} shadow-lg relative`}>
                       <div className="w-full h-full rounded-full bg-white bg-opacity-20 flex items-center justify-center">
                         {riskLevel === 'critical' && (
                           <AlertTriangle className="w-3 h-3 text-white" />
+                        )}
+                        {isManualData && (
+                          <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full border border-white"></div>
                         )}
                       </div>
                     </div>
@@ -197,7 +253,7 @@ export const LiveEventMap = () => {
               {/* Venue Labels */}
               <div className="absolute top-4 left-4 bg-white bg-opacity-90 p-2 rounded shadow">
                 <div className="text-sm font-medium text-gray-900">Event Venue Layout</div>
-                <div className="text-xs text-gray-600">Click markers for details</div>
+                <div className="text-xs text-gray-600">Click markers for details • Blue dot = manual data</div>
               </div>
             </div>
           </Card>
@@ -213,9 +269,16 @@ export const LiveEventMap = () => {
               <div className="space-y-4">
                 <div>
                   <h4 className="font-medium text-foreground">{selectedLocationData.name}</h4>
-                  <Badge className={`mt-1 ${getRiskColor(getDensityRiskLevel(actualLocationData?.density || selectedLocationData.density))} text-white`}>
-                    {getDensityRiskLevel(actualLocationData?.density || selectedLocationData.density).toUpperCase()} RISK
-                  </Badge>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge className={`${getRiskColor(getDensityRiskLevel(actualLocationData?.density || selectedLocationData.density))} text-white`}>
+                      {getDensityRiskLevel(actualLocationData?.density || selectedLocationData.density).toUpperCase()} RISK
+                    </Badge>
+                    {actualLocationData && (
+                      <Badge variant="outline" className="border-blue-500 text-blue-600">
+                        Manual Data
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="space-y-3">
@@ -238,6 +301,11 @@ export const LiveEventMap = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Max Capacity</span>
                     <span className="font-medium">{actualLocationData?.capacity || selectedLocationData.capacity}</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Current Count</span>
+                    <span className="font-medium">{actualLocationData?.current || Math.round((selectedLocationData.capacity * selectedLocationData.density) / 100)}</span>
                   </div>
                   
                   <div className="flex items-center justify-between">
@@ -301,7 +369,7 @@ export const LiveEventMap = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Active Cameras</p>
                 <p className="text-xl font-bold text-foreground">
-                  {mapLocations.reduce((sum, loc) => sum + loc.cameras, 0)}
+                  {allMapLocations.reduce((sum, loc) => sum + loc.cameras, 0)}
                 </p>
               </div>
             </div>
@@ -313,7 +381,8 @@ export const LiveEventMap = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Avg. Density</p>
                 <p className="text-xl font-bold text-foreground">
-                  {Math.round(locations.reduce((sum, loc) => sum + loc.density, 0) / locations.length) || 0}%
+                  {Math.round(locations.reduce((sum, loc) => sum + loc.density, 0) / locations.length) || 
+                   Math.round(allMapLocations.reduce((sum, loc) => sum + loc.density, 0) / allMapLocations.length)}%
                 </p>
               </div>
             </div>

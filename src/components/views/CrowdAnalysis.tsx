@@ -3,9 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, TrendingUp, AlertTriangle, MapPin, RefreshCw } from 'lucide-react';
+import { Users, TrendingUp, AlertTriangle, MapPin, RefreshCw, FileText } from 'lucide-react';
 import { crowdService, CrowdMetric } from '@/services/crowdService';
 import { crowdDataService, LocationData } from '@/services/crowdDataService';
+import { ManualDataInput } from '@/components/ManualDataInput';
 import { toast } from 'sonner';
 
 export const CrowdAnalysis = () => {
@@ -62,6 +63,39 @@ export const CrowdAnalysis = () => {
     toast.success('Data exported successfully');
   };
 
+  const generateSummary = () => {
+    const totalPeople = locations.reduce((sum, loc) => sum + loc.current, 0);
+    const highRiskAreas = locations.filter(loc => loc.density >= 80);
+    const avgDensity = Math.round(locations.reduce((sum, loc) => sum + loc.density, 0) / locations.length);
+    
+    let summary = `**Crowd Analysis Summary - ${new Date().toLocaleString()}**\n\n`;
+    summary += `**Overall Situation:**\n`;
+    summary += `• Total attendees: ${totalPeople.toLocaleString()}\n`;
+    summary += `• Average density: ${avgDensity}%\n`;
+    summary += `• High-risk areas: ${highRiskAreas.length}\n\n`;
+    
+    if (highRiskAreas.length > 0) {
+      summary += `**Critical Areas Requiring Attention:**\n`;
+      highRiskAreas.forEach(area => {
+        summary += `• ${area.name}: ${area.density}% capacity (${area.current}/${area.capacity})\n`;
+      });
+      summary += `\n`;
+    }
+    
+    summary += `**Recommendations:**\n`;
+    if (highRiskAreas.length > 0) {
+      summary += `• Deploy additional security to high-density areas\n`;
+      summary += `• Consider opening alternative routes/entrances\n`;
+      summary += `• Monitor crowd flow patterns closely\n`;
+    } else {
+      summary += `• Current crowd levels are manageable\n`;
+      summary += `• Continue routine monitoring\n`;
+    }
+    
+    navigator.clipboard.writeText(summary);
+    toast.success('Summary copied to clipboard');
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Mobile Header */}
@@ -70,7 +104,7 @@ export const CrowdAnalysis = () => {
           <div>
             <h1 className="text-xl md:text-2xl font-bold text-foreground">Crowd Analysis</h1>
             <p className="text-sm md:text-base text-muted-foreground">
-              Real-time crowd density monitoring
+              Real-time crowd density monitoring with manual data input
               {lastRefresh && (
                 <span className="block text-xs opacity-75">
                   Last updated: {lastRefresh.toLocaleTimeString()}
@@ -79,6 +113,13 @@ export const CrowdAnalysis = () => {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button 
+              onClick={generateSummary}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Generate Summary
+            </Button>
             <Button 
               onClick={loadMetrics} 
               disabled={loading}
@@ -141,12 +182,15 @@ export const CrowdAnalysis = () => {
               <div>
                 <p className="text-xs md:text-sm text-muted-foreground">Avg Density</p>
                 <p className="text-lg md:text-2xl font-bold text-foreground">
-                  {Math.round(locations.reduce((sum, loc) => sum + loc.density, 0) / locations.length)}%
+                  {Math.round(locations.reduce((sum, loc) => sum + loc.density, 0) / locations.length) || 0}%
                 </p>
               </div>
             </div>
           </Card>
         </div>
+
+        {/* Manual Data Input */}
+        <ManualDataInput />
 
         {/* Location Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
