@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,7 +24,7 @@ export const VideoFeeds = () => {
       id: 1,
       name: 'Main Entrance',
       location: 'North Gate',
-      status: 'live',
+      status: 'offline',
       viewers: 12,
       alerts: 0,
       streamUrl: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4'
@@ -33,7 +33,7 @@ export const VideoFeeds = () => {
       id: 2,
       name: 'Stage Area',
       location: 'Central Stage',
-      status: 'live',
+      status: 'offline',
       viewers: 25,
       alerts: 1,
       streamUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
@@ -49,6 +49,12 @@ export const VideoFeeds = () => {
     location: '',
     streamUrl: ''
   });
+
+  const updateFeedStatus = useCallback((feedId: number, status: CameraFeed['status']) => {
+    setFeeds(prev => prev.map(feed => 
+      feed.id === feedId ? { ...feed, status } : feed
+    ));
+  }, []);
 
   const VideoPlayer = ({ feed, isFullView = false }: { feed: CameraFeed; isFullView?: boolean }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -69,22 +75,14 @@ export const VideoFeeds = () => {
           setIsLoading(false);
           setDuration(video.duration);
           console.log(`Stream loaded for ${feed.name}`);
-          
-          // Update feed status
-          setFeeds(prev => prev.map(f => 
-            f.id === feed.id ? { ...f, status: 'live' as const } : f
-          ));
+          updateFeedStatus(feed.id, 'live');
         };
 
         const handleError = (e: Event) => {
           console.error(`Stream error for ${feed.name}:`, e);
           setHasError(true);
           setIsLoading(false);
-          
-          // Update feed status
-          setFeeds(prev => prev.map(f => 
-            f.id === feed.id ? { ...f, status: 'error' as const } : f
-          ));
+          updateFeedStatus(feed.id, 'error');
         };
 
         const handleTimeUpdate = () => {
@@ -94,35 +92,50 @@ export const VideoFeeds = () => {
         const handlePlay = () => setIsPlaying(true);
         const handlePause = () => setIsPlaying(false);
 
+        const handleCanPlay = () => {
+          setIsLoading(false);
+          updateFeedStatus(feed.id, 'live');
+        };
+
         video.addEventListener('loadeddata', handleLoadedData);
+        video.addEventListener('canplay', handleCanPlay);
         video.addEventListener('error', handleError);
         video.addEventListener('timeupdate', handleTimeUpdate);
         video.addEventListener('play', handlePlay);
         video.addEventListener('pause', handlePause);
 
         // Set connecting status initially
-        setFeeds(prev => prev.map(f => 
-          f.id === feed.id ? { ...f, status: 'connecting' as const } : f
-        ));
+        updateFeedStatus(feed.id, 'connecting');
+
+        // Configure video for live streaming
+        video.autoplay = true;
+        video.muted = true;
+        video.playsInline = true;
+        video.preload = 'auto';
 
         video.load();
 
         return () => {
           video.removeEventListener('loadeddata', handleLoadedData);
+          video.removeEventListener('canplay', handleCanPlay);
           video.removeEventListener('error', handleError);
           video.removeEventListener('timeupdate', handleTimeUpdate);
           video.removeEventListener('play', handlePlay);
           video.removeEventListener('pause', handlePause);
         };
       }
-    }, [feed.streamUrl, feed.name, feed.id]);
+    }, [feed.streamUrl, feed.name, feed.id, updateFeedStatus]);
 
     const togglePlayPause = () => {
       if (videoRef.current) {
         if (isPlaying) {
           videoRef.current.pause();
         } else {
-          videoRef.current.play();
+          videoRef.current.play().catch(e => {
+            console.error('Error playing video:', e);
+            setHasError(true);
+            updateFeedStatus(feed.id, 'error');
+          });
         }
       }
     };
@@ -138,6 +151,7 @@ export const VideoFeeds = () => {
       if (videoRef.current) {
         setIsLoading(true);
         setHasError(false);
+        updateFeedStatus(feed.id, 'connecting');
         videoRef.current.load();
       }
     };
@@ -174,7 +188,7 @@ export const VideoFeeds = () => {
           <div className="absolute inset-0 bg-red-900/80 flex flex-col items-center justify-center">
             <AlertTriangle className="w-8 h-8 text-red-400 mb-2" />
             <p className="text-red-200 text-sm text-center px-4 mb-3">
-              Unable to load stream. Please check camera connectivity.
+              Unable to load stream. Please check camera connectivity or URL.
             </p>
             <Button 
               size="sm" 
@@ -192,10 +206,13 @@ export const VideoFeeds = () => {
               className="w-full h-full object-cover bg-black"
               muted={isMuted}
               playsInline
-              preload="metadata"
+              autoPlay
+              preload="auto"
+              crossOrigin="anonymous"
             >
               <source src={feed.streamUrl} type="video/mp4" />
               <source src={feed.streamUrl} type="application/x-mpegURL" />
+              <source src={feed.streamUrl} type="video/webm" />
               Your browser does not support the video tag.
             </video>
 
@@ -296,7 +313,7 @@ export const VideoFeeds = () => {
 
   const handleDeleteFeed = (feedId: number) => {
     setFeeds(feeds.filter(feed => feed.id !== feedId));
-    toast.success('Camera feed deleted successfully');
+    toast.success('Camera feed removed successfully');
     console.log('Deleted camera feed:', feedId);
   };
 
@@ -364,10 +381,10 @@ export const VideoFeeds = () => {
                   <Input
                     value={newFeed.streamUrl}
                     onChange={(e) => setNewFeed({ ...newFeed, streamUrl: e.target.value })}
-                    placeholder="rtsp://192.168.1.100:554/stream or http://..."
+                    placeholder="http://192.168.1.100:8080/video or rtsp://..."
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Supports RTSP, HTTP, HLS streams, or video file URLs
+                    Supports HTTP, RTSP, HLS streams, or video file URLs
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -409,7 +426,7 @@ export const VideoFeeds = () => {
                   <Input
                     value={newFeed.streamUrl}
                     onChange={(e) => setNewFeed({ ...newFeed, streamUrl: e.target.value })}
-                    placeholder="rtsp://192.168.1.100:554/stream or http://..."
+                    placeholder="http://192.168.1.100:8080/video or rtsp://..."
                   />
                 </div>
                 <div className="flex gap-2">
@@ -488,7 +505,7 @@ export const VideoFeeds = () => {
 
                 {/* Alerts Badge */}
                 {feed.alerts > 0 && (
-                  <div className="absolute top-3 right-3">
+                  <div className="absolute top-3 right-14">
                     <div className="flex items-center gap-1 bg-red-600/90 text-white px-2 py-1 rounded text-xs font-medium">
                       <AlertTriangle className="w-3 h-3" />
                       {feed.alerts}
@@ -497,25 +514,23 @@ export const VideoFeeds = () => {
                 )}
 
                 {/* Action Buttons */}
-                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="flex gap-1">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => handleEditFeed(feed)}
-                      className="h-7 w-7 p-0"
-                    >
-                      <Edit className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDeleteFeed(feed.id)}
-                      className="h-7 w-7 p-0"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </div>
+                <div className="absolute top-3 right-3 flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => handleEditFeed(feed)}
+                    className="h-7 w-7 p-0 bg-black/70 hover:bg-black/90"
+                  >
+                    <Edit className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => handleDeleteFeed(feed.id)}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
                 </div>
 
                 {/* Camera Info */}
