@@ -57,6 +57,10 @@ export const VideoFeeds = () => {
     ));
   };
 
+  const handleFullscreen = (feed: CameraFeed) => {
+    setSelectedFeed(feed);
+  };
+
   const handleAddFeed = () => {
     if (newFeed.name && newFeed.location) {
       const feed: CameraFeed = {
@@ -297,7 +301,7 @@ export const VideoFeeds = () => {
                 <VideoPlayer 
                   feed={feed} 
                   onStatusChange={updateFeedStatus}
-                  onFullscreen={setSelectedFeed}
+                  onFullscreen={handleFullscreen}
                 />
                 
                 {/* Status Badge */}
