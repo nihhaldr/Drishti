@@ -41,11 +41,6 @@ export const CrowdSummaryCard = ({
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
           <AlertCircle className="w-5 h-5 text-primary" />
-          <img 
-            src="/lovable-uploads/a6d3920a-f84c-4a08-b2c5-313fc9bbf28b.png" 
-            alt="Summary icon" 
-            className="w-5 h-5"
-          />
           Crowd Analysis Summary
         </h3>
         <Button 

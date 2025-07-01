@@ -132,14 +132,7 @@ export const SituationalSummaries = () => {
           <Card className="bg-white border border-gray-200 rounded-lg shadow-sm">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <img 
-                    src="/lovable-uploads/a6d3920a-f84c-4a08-b2c5-313fc9bbf28b.png" 
-                    alt="Summary icon" 
-                    className="w-5 h-5"
-                  />
-                  Generated Summary
-                </h3>
+                <h3 className="text-lg font-semibold text-gray-900">Generated Summary</h3>
                 <div className="flex gap-2">
                   <Button onClick={copyToClipboard} size="sm" variant="outline">
                     <Copy className="w-4 h-4 mr-2" />
