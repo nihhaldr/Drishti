@@ -1,13 +1,105 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Bell, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { alertService } from '@/services/alertService';
 import { toast } from 'sonner';
 
+interface LocationData {
+  name: string;
+  latitude: number;
+  longitude: number;
+}
+
 export const TopBar = ({ onToggleAlerts }: { onToggleAlerts?: () => void }) => {
   const [query, setQuery] = useState('');
+  const [alertCount, setAlertCount] = useState(0);
+  const [currentLocation, setCurrentLocation] = useState<LocationData | null>(null);
+  const [locationLoading, setLocationLoading] = useState(true);
+
+  useEffect(() => {
+    // Fetch alert count
+    const fetchAlertCount = async () => {
+      try {
+        const alerts = await alertService.getAll();
+        const activeAlerts = alerts.filter(alert => alert.is_active);
+        setAlertCount(activeAlerts.length);
+      } catch (error) {
+        console.error('Error fetching alerts:', error);
+        setAlertCount(0);
+      }
+    };
+
+    fetchAlertCount();
+
+    // Set up interval to refresh alert count
+    const interval = setInterval(fetchAlertCount, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    // Get current location
+    const getCurrentLocation = () => {
+      if (!navigator.geolocation) {
+        setCurrentLocation({
+          name: 'Command Center',
+          latitude: 0,
+          longitude: 0
+        });
+        setLocationLoading(false);
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          
+          try {
+            // Try to get location name using reverse geocoding
+            const response = await fetch(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+            );
+            
+            if (response.ok) {
+              const data = await response.json();
+              const locationName = data.city || data.locality || data.principalSubdivision || 'Command Center';
+              
+              setCurrentLocation({
+                name: locationName,
+                latitude,
+                longitude
+              });
+            } else {
+              throw new Error('Geocoding failed');
+            }
+          } catch (error) {
+            console.error('Error getting location name:', error);
+            setCurrentLocation({
+              name: `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`,
+              latitude,
+              longitude
+            });
+          }
+          
+          setLocationLoading(false);
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          setCurrentLocation({
+            name: 'Command Center',
+            latitude: 0,
+            longitude: 0
+          });
+          setLocationLoading(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+      );
+    };
+
+    getCurrentLocation();
+  }, []);
 
   const playEmergencySound = () => {
     // Create an audio context for the siren sound
@@ -38,15 +130,20 @@ export const TopBar = ({ onToggleAlerts }: { onToggleAlerts?: () => void }) => {
       // Play siren sound
       playEmergencySound();
       
-      // Create emergency alert
+      // Create emergency alert with current location
       await alertService.create({
         title: 'Emergency Alert Activated',
-        message: 'Emergency alert has been triggered from Command Center',
+        message: `Emergency alert has been triggered from ${currentLocation?.name || 'Command Center'}`,
         alert_type: 'general',
         severity: 'critical',
         is_active: true,
-        location_name: 'Command Center'
+        location_name: currentLocation?.name || 'Command Center'
       });
+      
+      // Refresh alert count
+      const alerts = await alertService.getAll();
+      const activeAlerts = alerts.filter(alert => alert.is_active);
+      setAlertCount(activeAlerts.length);
       
       toast.error('Emergency Alert Activated - Siren Sound Played');
     } catch (error) {
@@ -88,9 +185,13 @@ export const TopBar = ({ onToggleAlerts }: { onToggleAlerts?: () => void }) => {
           >
             <Bell size={20} />
           </Button>
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-google-red rounded-full flex items-center justify-center">
-            <span className="text-xs text-white">3</span>
-          </div>
+          {alertCount > 0 && (
+            <div className="absolute -top-1 -right-1 min-w-5 h-5 bg-google-red rounded-full flex items-center justify-center px-1">
+              <span className="text-xs text-white font-medium">
+                {alertCount > 99 ? '99+' : alertCount}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* User Profile */}

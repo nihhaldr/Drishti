@@ -10,7 +10,8 @@ import {
   Brain,
   Eye,
   UserSearch,
-  Smartphone
+  Smartphone,
+  AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -25,7 +26,7 @@ const menuItems = [
   { id: 'overview', label: 'Live Event Map', icon: Map },
   { id: 'feeds', label: 'Video Feeds', icon: Camera },
   { id: 'crowd', label: 'Crowd Analysis', icon: Users },
-  { id: 'incidents', label: 'Incidents', icon: Bell },
+  { id: 'incidents', label: 'Incidents', icon: AlertCircle },
   { id: 'bottleneck', label: 'Bottleneck Analysis', icon: TrendingUp },
   { id: 'summaries', label: 'Situational Summary', icon: Brain },
   { id: 'anomaly', label: 'Anomaly Detection', icon: Eye },
