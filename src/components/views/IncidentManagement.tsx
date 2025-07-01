@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertTriangle, Clock, MapPin, Plus, Search, Filter, Eye, RefreshCw } from 'lucide-react';
 import { incidentService, Incident, IncidentStatus, IncidentPriority, IncidentType } from '@/services/incidentService';
+import { crowdDataService } from '@/services/crowdDataService';
+import { LocationPicker } from '@/components/location/LocationPicker';
 import { toast } from 'sonner';
 
 export const IncidentManagement = () => {
@@ -18,6 +20,7 @@ export const IncidentManagement = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<{name: string; latitude: number; longitude: number} | null>(null);
   const [newIncident, setNewIncident] = useState({
     title: '',
     description: '',
@@ -73,7 +76,12 @@ export const IncidentManagement = () => {
 
     try {
       setLoading(true);
-      await incidentService.create(newIncident);
+      const incidentData = {
+        ...newIncident,
+        location_name: selectedLocation?.name || newIncident.location_name
+      };
+      
+      await incidentService.create(incidentData);
       setIsCreateDialogOpen(false);
       setNewIncident({
         title: '',
@@ -82,6 +90,7 @@ export const IncidentManagement = () => {
         priority: 'medium',
         location_name: ''
       });
+      setSelectedLocation(null);
       toast.success('Incident created successfully');
     } catch (error) {
       console.error('Error creating incident:', error);
@@ -165,6 +174,16 @@ export const IncidentManagement = () => {
 
   const statusCounts = getStatusCounts();
 
+  const getExistingLocations = () => {
+    const crowdLocations = crowdDataService.getLocations().map(loc => ({
+      name: loc.name,
+      latitude: Math.random() * 180 - 90, // Mock coordinates for demo
+      longitude: Math.random() * 360 - 180
+    }));
+    
+    return crowdLocations;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Mobile Header */}
@@ -239,11 +258,22 @@ export const IncidentManagement = () => {
                         <SelectItem value="low">Low</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Input
-                      placeholder="Location"
-                      value={newIncident.location_name}
-                      onChange={(e) => setNewIncident(prev => ({ ...prev, location_name: e.target.value }))}
-                    />
+                    
+                    <div className="space-y-2">
+                      <LocationPicker
+                        onLocationSelect={setSelectedLocation}
+                        selectedLocation={selectedLocation}
+                        existingLocations={getExistingLocations()}
+                        buttonText="Add Location"
+                        buttonVariant="outline"
+                      />
+                      {selectedLocation && (
+                        <div className="text-sm text-muted-foreground">
+                          Selected: {selectedLocation.name}
+                        </div>
+                      )}
+                    </div>
+                    
                     <Button onClick={handleCreateIncident} className="w-full" disabled={loading}>
                       {loading ? 'Creating...' : 'Create Incident'}
                     </Button>

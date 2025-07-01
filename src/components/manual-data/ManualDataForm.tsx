@@ -2,11 +2,11 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Save, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { crowdDataService, LocationData } from '@/services/crowdDataService';
+import { LocationPicker } from '@/components/location/LocationPicker';
 
 interface ManualDataEntry {
   location: string;
@@ -14,7 +14,6 @@ interface ManualDataEntry {
   currentCount: number;
   density: number;
   trend: 'up' | 'down' | 'stable';
-  notes: string;
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
 }
 
@@ -31,9 +30,10 @@ export const ManualDataForm = ({ editingLocation, onSave, onCancel }: ManualData
     currentCount: editingLocation?.current || 0,
     density: editingLocation?.density || 0,
     trend: editingLocation?.trend || 'stable',
-    notes: '',
     riskLevel: 'low'
   });
+
+  const [selectedMapLocation, setSelectedMapLocation] = useState<{name: string; latitude: number; longitude: number} | null>(null);
 
   const calculateDensity = (current: number, capacity: number) => {
     return capacity > 0 ? Math.round((current / capacity) * 100) : 0;
@@ -94,6 +94,14 @@ export const ManualDataForm = ({ editingLocation, onSave, onCancel }: ManualData
 
     toast.success(`Data ${editingLocation ? 'updated' : 'saved'} for ${entry.location}`);
     onSave();
+  };
+
+  const getExistingLocations = () => {
+    return crowdDataService.getLocations().map(loc => ({
+      name: loc.name,
+      latitude: Math.random() * 180 - 90, // Mock coordinates for demo
+      longitude: Math.random() * 360 - 180
+    }));
   };
 
   return (
@@ -176,14 +184,20 @@ export const ManualDataForm = ({ editingLocation, onSave, onCancel }: ManualData
         </div>
       </div>
 
-      <div>
-        <label className="text-sm font-medium mb-1 block">Additional Notes</label>
-        <Textarea
-          value={entry.notes}
-          onChange={(e) => setEntry(prev => ({ ...prev, notes: e.target.value }))}
-          placeholder="Any additional observations or concerns..."
-          rows={3}
+      <div className="space-y-2">
+        <label className="text-sm font-medium block">Map Location</label>
+        <LocationPicker
+          onLocationSelect={setSelectedMapLocation}
+          selectedLocation={selectedMapLocation}
+          existingLocations={getExistingLocations()}
+          buttonText="Add Location"
+          buttonVariant="outline"
         />
+        {selectedMapLocation && (
+          <div className="text-sm text-muted-foreground">
+            Selected: {selectedMapLocation.name}
+          </div>
+        )}
       </div>
 
       <div className="flex gap-2 pt-4">
