@@ -64,32 +64,37 @@ export const LiveEventMap = () => {
     }
   };
 
-  const openDirectionsFromCurrentLocation = (destinationLat?: number, destinationLng?: number) => {
-    if (!destinationLat || !destinationLng) {
-      toast.error('Location coordinates not available');
-      return;
-    }
-
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude: currentLat, longitude: currentLng } = position.coords;
-          const url = `https://www.google.com/maps/dir/${currentLat},${currentLng}/${destinationLat},${destinationLng}`;
-          window.open(url, '_blank');
-        },
-        (error) => {
-          // Fallback to directions without current location
-          const url = `https://www.google.com/maps/dir/?api=1&destination=${destinationLat},${destinationLng}`;
-          window.open(url, '_blank');
-          toast.error('Could not get current location, opening directions anyway');
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-      );
-    } else {
-      // Fallback for browsers without geolocation
-      const url = `https://www.google.com/maps/dir/?api=1&destination=${destinationLat},${destinationLng}`;
+  const openDirectionsFromCurrentLocation = (destinationLat?: number, destinationLng?: number, locationName?: string) => {
+    // If coordinates are available, use them
+    if (destinationLat && destinationLng) {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude: currentLat, longitude: currentLng } = position.coords;
+            const url = `https://www.google.com/maps/dir/${currentLat},${currentLng}/${destinationLat},${destinationLng}`;
+            window.open(url, '_blank');
+          },
+          (error) => {
+            // Fallback to directions without current location
+            const url = `https://www.google.com/maps/dir/?api=1&destination=${destinationLat},${destinationLng}`;
+            window.open(url, '_blank');
+            toast.error('Could not get current location, opening directions anyway');
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        );
+      } else {
+        // Fallback for browsers without geolocation
+        const url = `https://www.google.com/maps/dir/?api=1&destination=${destinationLat},${destinationLng}`;
+        window.open(url, '_blank');
+        toast.error('Geolocation not supported, opening directions anyway');
+      }
+    } else if (locationName) {
+      // Use location name as fallback
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(locationName)}`;
       window.open(url, '_blank');
-      toast.error('Geolocation not supported, opening directions anyway');
+      toast.success('Opening directions using location name');
+    } else {
+      toast.error('Location coordinates not available');
     }
   };
 
@@ -276,9 +281,9 @@ export const LiveEventMap = () => {
                     </div>
                   )}
 
-                  <div className="flex justify-end pt-2">
+                  <div className="flex justify-end">
                     <Button
-                      onClick={() => openDirectionsFromCurrentLocation(location.latitude, location.longitude)}
+                      onClick={() => openDirectionsFromCurrentLocation(location.latitude, location.longitude, location.name)}
                       size="sm"
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
@@ -329,9 +334,9 @@ export const LiveEventMap = () => {
                     Created: {new Date(incident.created_at).toLocaleString()}
                   </div>
 
-                  <div className="flex justify-end pt-2">
+                  <div className="flex justify-end">
                     <Button
-                      onClick={() => openDirectionsFromCurrentLocation(incident.latitude, incident.longitude)}
+                      onClick={() => openDirectionsFromCurrentLocation(incident.latitude, incident.longitude, incident.location_name)}
                       size="sm"
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
