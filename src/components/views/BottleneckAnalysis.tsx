@@ -2,130 +2,298 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, TrendingUp, MapPin, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { AlertTriangle, TrendingUp, Users, Clock, MapPin, RefreshCw } from 'lucide-react';
+import { crowdDataService, LocationData } from '@/services/crowdDataService';
+import { toast } from 'sonner';
 
-interface BottleneckPrediction {
-  id: string;
+interface BottleneckData {
   location: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
-  predictedTime: string;
-  confidence: number;
-  crowdDensity: number;
+  waitTime: number;
+  throughput: number;
+  capacity: number;
+  current: number;
+  trend: 'up' | 'down' | 'stable';
+  causes: string[];
   recommendations: string[];
 }
 
 export const BottleneckAnalysis = () => {
-  const [predictions, setPredictions] = useState<BottleneckPrediction[]>([
-    {
-      id: '1',
-      location: 'Main Gate Entry',
-      severity: 'high',
-      predictedTime: '15 minutes',
-      confidence: 87,
-      crowdDensity: 342,
-      recommendations: ['Deploy additional security', 'Open secondary gates', 'Redirect foot traffic']
-    },
-    {
-      id: '2',
-      location: 'Food Court Area',
-      severity: 'medium',
-      predictedTime: '25 minutes',
-      confidence: 72,
-      crowdDensity: 156,
-      recommendations: ['Monitor closely', 'Prepare crowd control barriers']
-    }
-  ]);
+  const [locations, setLocations] = useState<LocationData[]>([]);
+  const [bottlenecks, setBottlenecks] = useState<BottleneckData[]>([]);
+  const [selectedBottleneck, setSelectedBottleneck] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+
+  useEffect(() => {
+    // Initialize with shared data
+    setLocations(crowdDataService.getLocations());
+    generateBottleneckAnalysis(crowdDataService.getLocations());
+    
+    // Subscribe to changes
+    const unsubscribe = crowdDataService.subscribe((newLocations) => {
+      setLocations(newLocations);
+      generateBottleneckAnalysis(newLocations);
+      setLastUpdate(new Date());
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const generateBottleneckAnalysis = (locationData: LocationData[]) => {
+    const analysis = locationData.map(location => {
+      const density = location.density;
+      let severity: BottleneckData['severity'] = 'low';
+      let waitTime = 0;
+      let throughput = location.capacity;
+      let causes: string[] = [];
+      let recommendations: string[] = [];
+
+      // Determine severity based on density
+      if (density >= 90) {
+        severity = 'critical';
+        waitTime = Math.floor(Math.random() * 20) + 10; // 10-30 min
+        throughput = Math.floor(location.capacity * 0.3);
+        causes = ['Extreme overcrowding', 'Insufficient exits', 'Poor flow management'];
+        recommendations = [
+          'Immediate crowd dispersal required',
+          'Deploy emergency personnel',
+          'Consider temporary closure',
+          'Open alternative routes'
+        ];
+      } else if (density >= 75) {
+        severity = 'high';
+        waitTime = Math.floor(Math.random() * 10) + 5; // 5-15 min
+        throughput = Math.floor(location.capacity * 0.5);
+        causes = ['High crowd density', 'Limited exit capacity', 'Slow processing'];
+        recommendations = [
+          'Deploy additional staff',
+          'Implement crowd control measures',
+          'Monitor closely for escalation',
+          'Prepare contingency plans'
+        ];
+      } else if (density >= 60) {
+        severity = 'medium';
+        waitTime = Math.floor(Math.random() * 5) + 2; // 2-7 min
+        throughput = Math.floor(location.capacity * 0.7);
+        causes = ['Moderate congestion', 'Peak usage period'];
+        recommendations = [
+          'Increase processing speed',
+          'Consider additional entry points',
+          'Monitor for increases'
+        ];
+      } else {
+        severity = 'low';
+        waitTime = Math.floor(Math.random() * 3); // 0-3 min
+        throughput = Math.floor(location.capacity * 0.9);
+        causes = ['Normal flow'];
+        recommendations = ['Continue monitoring', 'Maintain current operations'];
+      }
+
+      return {
+        location: location.name,
+        severity,
+        waitTime,
+        throughput,
+        capacity: location.capacity,
+        current: location.current,
+        trend: location.trend,
+        causes,
+        recommendations
+      };
+    });
+
+    setBottlenecks(analysis);
+  };
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'critical': return 'bg-red-500';
-      case 'high': return 'bg-orange-500';
-      case 'medium': return 'bg-yellow-500';
-      case 'low': return 'bg-green-500';
-      default: return 'bg-gray-500';
+      case 'critical': return 'bg-red-600 text-white';
+      case 'high': return 'bg-red-500 text-white';
+      case 'medium': return 'bg-yellow-500 text-white';
+      default: return 'bg-green-500 text-white';
     }
   };
 
-  return (
-    <div className="p-6 space-y-6 bg-white min-h-screen">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Predictive Bottleneck Analysis</h1>
-          <p className="text-gray-600">AI-powered crowd flow predictions and recommendations</p>
-        </div>
-        <Badge variant="outline" className="border-blue-500 text-blue-600 bg-blue-50">
-          Vertex AI Enabled
-        </Badge>
-      </div>
+  const getTrendIcon = (trend: string) => {
+    if (trend === 'up') return <TrendingUp className="w-4 h-4 text-red-500" />;
+    if (trend === 'down') return <TrendingUp className="w-4 h-4 text-green-500 rotate-180" />;
+    return <div className="w-4 h-4 bg-gray-400 rounded-full" />;
+  };
 
-      {/* Heatmap Visualization */}
-      <Card className="bg-white border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5" />
-          Crowd Flow Heatmap
-        </h3>
-        <div className="w-full h-64 bg-gradient-to-br from-green-100 via-yellow-100 to-red-100 rounded-lg relative overflow-hidden">
-          <div className="absolute top-4 left-4 w-8 h-8 bg-red-500 rounded-full opacity-80 animate-pulse"></div>
-          <div className="absolute bottom-8 right-8 w-6 h-6 bg-yellow-500 rounded-full opacity-70"></div>
-          <div className="absolute top-1/2 left-1/2 w-12 h-12 bg-orange-500 rounded-full opacity-75 transform -translate-x-1/2 -translate-y-1/2"></div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center bg-white bg-opacity-90 p-4 rounded-lg">
-              <p className="text-gray-700 font-medium">Live Heatmap Analysis</p>
-              <p className="text-sm text-gray-500">Red = High Risk | Yellow = Medium Risk | Green = Safe</p>
+  const refreshAnalysis = async () => {
+    try {
+      await crowdDataService.refreshFromService();
+      toast.success('Bottleneck analysis refreshed');
+    } catch (error) {
+      toast.error('Failed to refresh analysis');
+    }
+  };
+
+  if (locations.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
+            <AlertTriangle className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">No Bottleneck Data Available</h2>
+            <p className="text-gray-600 mb-6">
+              Add crowd data in the Crowd Analysis section to generate bottleneck analysis and identify congestion points.
+            </p>
+            <div className="space-y-2 text-sm text-gray-500">
+              <p>• Bottleneck analysis requires crowd density data</p>
+              <p>• Flow analysis will be generated automatically</p>
+              <p>• Recommendations will be provided based on congestion levels</p>
             </div>
           </div>
         </div>
-      </Card>
+      </div>
+    );
+  }
 
-      {/* Predictions List */}
-      <div className="grid gap-4">
-        {predictions.map((prediction) => (
-          <Card key={prediction.id} className="bg-white border-gray-200 p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-3 h-3 rounded-full ${getSeverityColor(prediction.severity)}`}></div>
-                <div>
-                  <h4 className="text-lg font-semibold text-gray-900">{prediction.location}</h4>
-                  <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      <span>ETA: {prediction.predictedTime}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <MapPin className="w-4 h-4" />
-                      <span>{prediction.crowdDensity} people</span>
-                    </div>
-                  </div>
-                </div>
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Bottleneck Analysis</h1>
+              <p className="text-gray-600 mt-1">
+                Real-time congestion analysis and flow optimization • Last updated: {lastUpdate.toLocaleTimeString()}
+              </p>
+            </div>
+            <Button onClick={refreshAnalysis} className="bg-primary hover:bg-primary/90">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh Analysis
+            </Button>
+          </div>
+        </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card className="p-6 bg-white">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
               </div>
-              <Badge className={`${getSeverityColor(prediction.severity)} text-white`}>
-                {prediction.confidence}% confidence
-              </Badge>
-            </div>
-            
-            <div className="mb-4">
-              <h5 className="font-medium text-gray-900 mb-2">AI Recommendations:</h5>
-              <ul className="space-y-1">
-                {prediction.recommendations.map((rec, index) => (
-                  <li key={index} className="text-sm text-gray-700 flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                    {rec}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            
-            <div className="flex gap-2">
-              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
-                Deploy Resources
-              </Button>
-              <Button size="sm" variant="outline" className="border-gray-300">
-                View Details
-              </Button>
+              <div>
+                <p className="text-sm text-gray-600">Critical Bottlenecks</p>
+                <p className="text-2xl font-bold">
+                  {bottlenecks.filter(b => b.severity === 'critical').length}
+                </p>
+              </div>
             </div>
           </Card>
-        ))}
+
+          <Card className="p-6 bg-white">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Clock className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Avg Wait Time</p>
+                <p className="text-2xl font-bold">
+                  {Math.round(bottlenecks.reduce((sum, b) => sum + b.waitTime, 0) / bottlenecks.length) || 0}m
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-white">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Users className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Total Throughput</p>
+                <p className="text-2xl font-bold">
+                  {bottlenecks.reduce((sum, b) => sum + b.throughput, 0)}
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-white">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <MapPin className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Locations Analyzed</p>
+                <p className="text-2xl font-bold">{bottlenecks.length}</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Bottleneck Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {bottlenecks.map((bottleneck, index) => (
+            <Card 
+              key={index} 
+              className={`p-6 bg-white cursor-pointer transition-all hover:shadow-lg ${
+                selectedBottleneck === bottleneck.location ? 'ring-2 ring-primary' : ''
+              }`}
+              onClick={() => setSelectedBottleneck(
+                selectedBottleneck === bottleneck.location ? null : bottleneck.location
+              )}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">{bottleneck.location}</h3>
+                <div className="flex items-center gap-2">
+                  {getTrendIcon(bottleneck.trend)}
+                  <Badge className={getSeverityColor(bottleneck.severity)}>
+                    {bottleneck.severity.toUpperCase()}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <p className="text-sm text-gray-600">Wait Time</p>
+                  <p className="text-xl font-bold">{bottleneck.waitTime}m</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Throughput</p>
+                  <p className="text-xl font-bold">{bottleneck.throughput}/h</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Current/Capacity</p>
+                  <p className="text-xl font-bold">{bottleneck.current}/{bottleneck.capacity}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Utilization</p>
+                  <p className="text-xl font-bold">
+                    {Math.round((bottleneck.current / bottleneck.capacity) * 100)}%
+                  </p>
+                </div>
+              </div>
+
+              {selectedBottleneck === bottleneck.location && (
+                <div className="border-t pt-4 space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Primary Causes</h4>
+                    <ul className="list-disc list-inside text-sm text-gray-600">
+                      {bottleneck.causes.map((cause, i) => (
+                        <li key={i}>{cause}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Recommendations</h4>
+                    <ul className="list-disc list-inside text-sm text-gray-600">
+                      {bottleneck.recommendations.map((rec, i) => (
+                        <li key={i}>{rec}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, TrendingUp, AlertTriangle, MapPin, RefreshCw, FileText } from 'lucide-react';
+import { Users, TrendingUp, AlertTriangle, MapPin, RefreshCw, FileText, Trash2, AlertCircle } from 'lucide-react';
 import { crowdService, CrowdMetric } from '@/services/crowdService';
 import { crowdDataService, LocationData } from '@/services/crowdDataService';
 import { ManualDataInput } from '@/components/ManualDataInput';
@@ -12,23 +12,31 @@ import { toast } from 'sonner';
 export const CrowdAnalysis = () => {
   const [metrics, setMetrics] = useState<CrowdMetric[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [locations, setLocations] = useState<LocationData[]>([]);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [showSummary, setShowSummary] = useState(true);
+  const [generatedSummary, setGeneratedSummary] = useState<string>('');
 
   useEffect(() => {
     // Initialize with shared data
     setLocations(crowdDataService.getLocations());
+    generateSummary();
     
     // Subscribe to changes
     const unsubscribe = crowdDataService.subscribe((newLocations) => {
       setLocations(newLocations);
+      generateSummary();
     });
 
     loadMetrics();
 
     return unsubscribe;
   }, []);
+
+  const generateSummary = () => {
+    const summary = crowdDataService.generateSummary();
+    setGeneratedSummary(summary);
+  };
 
   const loadMetrics = async () => {
     setLoading(true);
@@ -63,42 +71,25 @@ export const CrowdAnalysis = () => {
     toast.success('Data exported successfully');
   };
 
-  const generateSummary = () => {
-    const totalPeople = locations.reduce((sum, loc) => sum + loc.current, 0);
-    const highRiskAreas = locations.filter(loc => loc.density >= 80);
-    const avgDensity = Math.round(locations.reduce((sum, loc) => sum + loc.density, 0) / locations.length);
-    
-    let summary = `**Crowd Analysis Summary - ${new Date().toLocaleString()}**\n\n`;
-    summary += `**Overall Situation:**\n`;
-    summary += `• Total attendees: ${totalPeople.toLocaleString()}\n`;
-    summary += `• Average density: ${avgDensity}%\n`;
-    summary += `• High-risk areas: ${highRiskAreas.length}\n\n`;
-    
-    if (highRiskAreas.length > 0) {
-      summary += `**Critical Areas Requiring Attention:**\n`;
-      highRiskAreas.forEach(area => {
-        summary += `• ${area.name}: ${area.density}% capacity (${area.current}/${area.capacity})\n`;
-      });
-      summary += `\n`;
-    }
-    
-    summary += `**Recommendations:**\n`;
-    if (highRiskAreas.length > 0) {
-      summary += `• Deploy additional security to high-density areas\n`;
-      summary += `• Consider opening alternative routes/entrances\n`;
-      summary += `• Monitor crowd flow patterns closely\n`;
-    } else {
-      summary += `• Current crowd levels are manageable\n`;
-      summary += `• Continue routine monitoring\n`;
-    }
-    
-    navigator.clipboard.writeText(summary);
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
     toast.success('Summary copied to clipboard');
+  };
+
+  const removeLocation = (locationName: string) => {
+    crowdDataService.removeLocation(locationName);
+    toast.success(`Removed ${locationName} from monitoring`);
+  };
+
+  const clearAllData = () => {
+    if (window.confirm('Are you sure you want to remove all crowd data? This action cannot be undone.')) {
+      crowdDataService.clearAllLocations();
+      toast.success('All crowd data has been cleared');
+    }
   };
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border p-4 md:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -114,11 +105,11 @@ export const CrowdAnalysis = () => {
           </div>
           <div className="flex gap-2">
             <Button 
-              onClick={generateSummary}
+              onClick={() => copyToClipboard(generatedSummary)}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               <FileText className="w-4 h-4 mr-2" />
-              Generate Summary
+              Copy Summary
             </Button>
             <Button 
               onClick={loadMetrics} 
@@ -135,6 +126,16 @@ export const CrowdAnalysis = () => {
             >
               Export Data
             </Button>
+            {locations.length > 0 && (
+              <Button 
+                onClick={clearAllData}
+                variant="destructive"
+                size="sm"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Clear All
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -189,74 +190,115 @@ export const CrowdAnalysis = () => {
           </Card>
         </div>
 
+        {/* Analysis Summary */}
+        {showSummary && generatedSummary && (
+          <Card className="p-4 md:p-6 bg-card border-border">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-primary" />
+                Crowd Analysis Summary
+              </h3>
+              <Button 
+                onClick={() => setShowSummary(false)}
+                variant="ghost"
+                size="sm"
+              >
+                Hide
+              </Button>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-lg border">
+              <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono">
+                {generatedSummary}
+              </pre>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Button 
+                onClick={() => copyToClipboard(generatedSummary)}
+                size="sm"
+                variant="outline"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Copy Summary
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {!showSummary && (
+          <div className="text-center">
+            <Button 
+              onClick={() => setShowSummary(true)}
+              variant="outline"
+            >
+              Show Analysis Summary
+            </Button>
+          </div>
+        )}
+
         {/* Manual Data Input */}
         <ManualDataInput />
 
         {/* Location Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {locations.map((location, index) => (
-            <Card 
-              key={index} 
-              className={`p-4 md:p-6 bg-card border-border cursor-pointer transition-all hover:shadow-lg ${
-                selectedLocation === location.name ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() => setSelectedLocation(location.name)}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base md:text-lg font-semibold text-foreground">{location.name}</h3>
-                {getTrendIcon(location.trend)}
-              </div>
-              
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Density</span>
-                  <Badge className={`${getDensityColor(location.density)} text-white`}>
-                    {location.density}%
-                  </Badge>
-                </div>
-                
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full ${getDensityColor(location.density)}`}
-                    style={{ width: `${location.density}%` }}
-                  />
-                </div>
-                
-                <div className="flex justify-between text-xs md:text-sm text-muted-foreground">
-                  <span>Current: {location.current}</span>
-                  <span>Capacity: {location.capacity}</span>
-                </div>
-                
-                {location.density >= 80 && (
-                  <div className="flex items-center gap-2 p-2 bg-red-50 border border-red-200 rounded text-red-700">
-                    <AlertTriangle className="w-4 h-4" />
-                    <span className="text-xs">High density alert</span>
-                  </div>
-                )}
-              </div>
-            </Card>
-          ))}
-        </div>
-
-        {/* Selected Location Detail */}
-        {selectedLocation && (
-          <Card className="p-4 md:p-6 bg-card border-border">
-            <h3 className="text-lg md:text-xl font-semibold text-foreground mb-4">{selectedLocation} - Detailed View</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-muted-foreground">Flow Direction</p>
-                <p className="text-lg font-semibold text-foreground">North → South</p>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-muted-foreground">Wait Time</p>
-                <p className="text-lg font-semibold text-foreground">3.2 min</p>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-muted-foreground">Temperature</p>
-                <p className="text-lg font-semibold text-foreground">24°C</p>
-              </div>
-            </div>
+        {locations.length === 0 ? (
+          <Card className="p-8 text-center bg-card border-border">
+            <MapPin className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">No Crowd Data Available</h3>
+            <p className="text-muted-foreground mb-4">
+              Start by adding manual crowd data entries using the form above to begin analysis.
+            </p>
           </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {locations.map((location, index) => (
+              <Card 
+                key={index} 
+                className="p-4 md:p-6 bg-card border-border transition-all hover:shadow-lg"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base md:text-lg font-semibold text-foreground">{location.name}</h3>
+                  <div className="flex items-center gap-2">
+                    {getTrendIcon(location.trend)}
+                    <Button
+                      onClick={() => removeLocation(location.name)}
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Density</span>
+                    <Badge className={`${getDensityColor(location.density)} text-white`}>
+                      {location.density}%
+                    </Badge>
+                  </div>
+                  
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full ${getDensityColor(location.density)}`}
+                      style={{ width: `${location.density}%` }}
+                    />
+                  </div>
+                  
+                  <div className="flex justify-between text-xs md:text-sm text-muted-foreground">
+                    <span>Current: {location.current}</span>
+                    <span>Capacity: {location.capacity}</span>
+                  </div>
+                  
+                  {location.density >= 80 && (
+                    <div className="flex items-center gap-2 p-2 bg-red-50 border border-red-200 rounded text-red-700">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span className="text-xs">High density alert</span>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
     </div>

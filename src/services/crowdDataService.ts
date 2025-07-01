@@ -9,17 +9,16 @@ export interface LocationData {
   current: number;
 }
 
+const STORAGE_KEY = 'drishti_crowd_data';
+
 class CrowdDataService {
   private static instance: CrowdDataService;
-  private locations: LocationData[] = [
-    { name: 'Main Stage', density: 85, trend: 'up', capacity: 500, current: 425 },
-    { name: 'Gate 3', density: 65, trend: 'stable', capacity: 200, current: 130 },
-    { name: 'Food Court', density: 72, trend: 'down', capacity: 300, current: 216 },
-    { name: 'VIP Area', density: 45, trend: 'up', capacity: 100, current: 45 },
-    { name: 'Parking Lot A', density: 30, trend: 'stable', capacity: 1000, current: 300 },
-    { name: 'Emergency Exit 2', density: 15, trend: 'down', capacity: 50, current: 8 }
-  ];
+  private locations: LocationData[] = [];
   private subscribers: ((locations: LocationData[]) => void)[] = [];
+
+  constructor() {
+    this.loadFromCache();
+  }
 
   public static getInstance(): CrowdDataService {
     if (!CrowdDataService.instance) {
@@ -28,12 +27,35 @@ class CrowdDataService {
     return CrowdDataService.instance;
   }
 
+  private loadFromCache(): void {
+    try {
+      const cached = localStorage.getItem(STORAGE_KEY);
+      if (cached) {
+        this.locations = JSON.parse(cached);
+        console.log('Loaded crowd data from cache:', this.locations.length, 'locations');
+      }
+    } catch (error) {
+      console.error('Error loading cached crowd data:', error);
+      this.locations = [];
+    }
+  }
+
+  private saveToCache(): void {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.locations));
+      console.log('Saved crowd data to cache:', this.locations.length, 'locations');
+    } catch (error) {
+      console.error('Error saving crowd data to cache:', error);
+    }
+  }
+
   public getLocations(): LocationData[] {
     return [...this.locations];
   }
 
   public updateLocations(newLocations: LocationData[]): void {
     this.locations = [...newLocations];
+    this.saveToCache();
     this.notifySubscribers();
   }
 
@@ -41,13 +63,24 @@ class CrowdDataService {
     const existingIndex = this.locations.findIndex(loc => loc.name === locationData.name);
     
     if (existingIndex >= 0) {
-      // Update existing location
       this.locations[existingIndex] = { ...locationData };
     } else {
-      // Add new location
       this.locations.push({ ...locationData });
     }
     
+    this.saveToCache();
+    this.notifySubscribers();
+  }
+
+  public removeLocation(locationName: string): void {
+    this.locations = this.locations.filter(loc => loc.name !== locationName);
+    this.saveToCache();
+    this.notifySubscribers();
+  }
+
+  public clearAllLocations(): void {
+    this.locations = [];
+    this.saveToCache();
     this.notifySubscribers();
   }
 
@@ -106,6 +139,60 @@ class CrowdDataService {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  }
+
+  public generateSummary(): string {
+    if (this.locations.length === 0) {
+      return 'No crowd data available. Please add manual data entries to generate analysis.';
+    }
+
+    const totalPeople = this.locations.reduce((sum, loc) => sum + loc.current, 0);
+    const highRiskAreas = this.locations.filter(loc => loc.density >= 80);
+    const mediumRiskAreas = this.locations.filter(loc => loc.density >= 60 && loc.density < 80);
+    const avgDensity = Math.round(this.locations.reduce((sum, loc) => sum + loc.density, 0) / this.locations.length);
+    const increasingTrends = this.locations.filter(loc => loc.trend === 'up');
+    
+    let summary = `**Crowd Analysis Summary - ${new Date().toLocaleString()}**\n\n`;
+    summary += `**Overall Situation:**\n`;
+    summary += `• Total attendees: ${totalPeople.toLocaleString()}\n`;
+    summary += `• Average density: ${avgDensity}%\n`;
+    summary += `• Locations monitored: ${this.locations.length}\n`;
+    summary += `• High-risk areas (>80%): ${highRiskAreas.length}\n`;
+    summary += `• Medium-risk areas (60-80%): ${mediumRiskAreas.length}\n\n`;
+    
+    if (highRiskAreas.length > 0) {
+      summary += `**Critical Areas Requiring Attention:**\n`;
+      highRiskAreas.forEach(area => {
+        summary += `• ${area.name}: ${area.density}% capacity (${area.current}/${area.capacity}) - ${area.trend === 'up' ? '↗️ INCREASING' : area.trend === 'down' ? '↘️ DECREASING' : '➡️ STABLE'}\n`;
+      });
+      summary += `\n`;
+    }
+    
+    if (increasingTrends.length > 0) {
+      summary += `**Areas with Increasing Trends:**\n`;
+      increasingTrends.forEach(area => {
+        summary += `• ${area.name}: ${area.density}% capacity - Trend: UP\n`;
+      });
+      summary += `\n`;
+    }
+    
+    summary += `**Risk Assessment:**\n`;
+    if (highRiskAreas.length > 0) {
+      summary += `• STATUS: HIGH RISK - Immediate intervention required\n`;
+      summary += `• Deploy additional security to overcrowded areas\n`;
+      summary += `• Consider crowd dispersal measures\n`;
+      summary += `• Monitor evacuation routes\n`;
+    } else if (avgDensity > 60) {
+      summary += `• STATUS: MODERATE RISK - Enhanced monitoring recommended\n`;
+      summary += `• Prepare contingency measures\n`;
+      summary += `• Increase staff presence in busy areas\n`;
+    } else {
+      summary += `• STATUS: LOW RISK - Normal operations\n`;
+      summary += `• Continue routine monitoring\n`;
+      summary += `• Maintain readiness for capacity changes\n`;
+    }
+    
+    return summary;
   }
 }
 
