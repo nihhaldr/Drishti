@@ -283,9 +283,13 @@ export const LostAndFound = () => {
               <Card key={person.id} className="bg-white border-gray-200 p-6">
                 <div className="flex gap-4">
                   <img 
-                    src={person.photo_url} 
+                    src={person.photo_url || '/placeholder.svg'} 
                     alt={person.name}
                     className="w-20 h-20 rounded-lg object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/placeholder.svg';
+                    }}
                   />
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
@@ -310,9 +314,6 @@ export const LostAndFound = () => {
                   <div className="flex flex-col gap-2">
                     <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
                       View Details
-                    </Button>
-                    <Button size="sm" variant="outline">
-                      Contact Reporter
                     </Button>
                     <Button 
                       size="sm" 
