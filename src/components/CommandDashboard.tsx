@@ -9,6 +9,11 @@ import { useRouteState } from '@/hooks/useRouteState';
 export const CommandDashboard = () => {
   const { currentRoute, updateRoute } = useRouteState();
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+  const [showAlerts, setShowAlerts] = React.useState(false);
+
+  const handleToggleAlerts = () => {
+    setShowAlerts(!showAlerts);
+  };
 
   return (
     <div className="h-screen flex overflow-hidden bg-gray-100">
@@ -20,10 +25,10 @@ export const CommandDashboard = () => {
       />
       
       <div className="flex-1 flex flex-col overflow-hidden">
-        <TopBar />
+        <TopBar onToggleAlerts={handleToggleAlerts} />
         <div className="flex-1 flex overflow-hidden">
           <MainContent selectedView={currentRoute} />
-          <AlertPanel />
+          {showAlerts && <AlertPanel />}
         </div>
       </div>
     </div>

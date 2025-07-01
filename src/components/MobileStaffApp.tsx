@@ -86,13 +86,7 @@ export const MobileStaffApp = () => {
             <img src={qrCode} alt="QR Code" className="w-48 h-48 border rounded-lg" />
           </div>
           <p className="text-gray-600 mb-4">Scan QR code to download the Drishti Mobile Staff App</p>
-          <div className="space-y-2">
-            <Button className="w-full bg-blue-600 hover:bg-blue-700">
-              <QrCode className="w-4 h-4 mr-2" />
-              Generate Staff QR Code
-            </Button>
-            <p className="text-xs text-gray-500">Available for iOS and Android</p>
-          </div>
+          <p className="text-xs text-gray-500">Available for iOS and Android</p>
         </Card>
 
         {/* Mobile Features */}
@@ -120,14 +114,6 @@ export const MobileStaffApp = () => {
               <div>
                 <h4 className="font-medium text-green-900">Photo Reporting</h4>
                 <p className="text-sm text-green-700">Upload incident photos instantly</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 p-3 bg-purple-50 rounded border-l-4 border-purple-500">
-              <MapPin className="w-5 h-5 text-purple-600" />
-              <div>
-                <h4 className="font-medium text-purple-900">GPS Tracking</h4>
-                <p className="text-sm text-purple-700">Real-time staff location updates</p>
               </div>
             </div>
           </div>

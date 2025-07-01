@@ -3,9 +3,57 @@ import React, { useState } from 'react';
 import { Search, Bell, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { alertService } from '@/services/alertService';
+import { toast } from 'sonner';
 
-export const TopBar = () => {
+export const TopBar = ({ onToggleAlerts }: { onToggleAlerts?: () => void }) => {
   const [query, setQuery] = useState('');
+
+  const playEmergencySound = () => {
+    // Create an audio context for the siren sound
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    // Create a simple siren sound effect
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Configure the siren sound
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.5);
+    oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 1);
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 2);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 2);
+  };
+
+  const handleEmergencyAlert = async () => {
+    try {
+      // Play siren sound
+      playEmergencySound();
+      
+      // Create emergency alert
+      await alertService.create({
+        title: 'Emergency Alert Activated',
+        message: 'Emergency alert has been triggered from Command Center',
+        alert_type: 'general',
+        severity: 'critical',
+        is_active: true,
+        location_name: 'Command Center'
+      });
+      
+      toast.error('Emergency Alert Activated - Siren Sound Played');
+    } catch (error) {
+      console.error('Error creating emergency alert:', error);
+      toast.error('Failed to create emergency alert');
+    }
+  };
 
   return (
     <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm">
@@ -23,13 +71,21 @@ export const TopBar = () => {
       {/* Right side actions */}
       <div className="flex items-center gap-4">
         {/* Emergency Button */}
-        <Button className="bg-google-red hover:bg-red-600 text-white shadow-md">
+        <Button 
+          onClick={handleEmergencyAlert}
+          className="bg-google-red hover:bg-red-600 text-white shadow-md"
+        >
           Emergency Alert
         </Button>
 
         {/* Notifications */}
         <div className="relative">
-          <Button variant="ghost" size="icon" className="text-gray-600 hover:text-google-blue hover:bg-gray-50">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="text-gray-600 hover:text-google-blue hover:bg-gray-50"
+            onClick={onToggleAlerts}
+          >
             <Bell size={20} />
           </Button>
           <div className="absolute -top-1 -right-1 w-3 h-3 bg-google-red rounded-full flex items-center justify-center">
