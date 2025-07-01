@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Users, AlertTriangle, TrendingUp, RefreshCw, Navigation, Trash2 } from 'lucide-react';
+import { MapPin, Users, AlertTriangle, TrendingUp, RefreshCw, Navigation } from 'lucide-react';
 import { crowdDataService, LocationData } from '@/services/crowdDataService';
 import { incidentService, Incident } from '@/services/incidentService';
 import { toast } from 'sonner';
@@ -90,16 +90,6 @@ export const LiveEventMap = () => {
       const url = `https://www.google.com/maps/dir/?api=1&destination=${destinationLat},${destinationLng}`;
       window.open(url, '_blank');
       toast.error('Geolocation not supported, opening directions anyway');
-    }
-  };
-
-  const handleRemoveIncident = async (incidentId: string) => {
-    const success = await incidentService.delete(incidentId);
-    if (success) {
-      toast.success('Incident removed successfully');
-      setSelectedIncident(null);
-    } else {
-      toast.error('Failed to remove incident');
     }
   };
 
@@ -286,14 +276,14 @@ export const LiveEventMap = () => {
                     </div>
                   )}
 
-                  <div className="flex justify-center pt-2">
+                  <div className="flex justify-end pt-2">
                     <Button
                       onClick={() => openDirectionsFromCurrentLocation(location.latitude, location.longitude)}
                       size="sm"
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       <Navigation className="w-4 h-4 mr-2" />
-                      Get Directions
+                      Directions
                     </Button>
                   </div>
                 </div>
@@ -339,22 +329,14 @@ export const LiveEventMap = () => {
                     Created: {new Date(incident.created_at).toLocaleString()}
                   </div>
 
-                  <div className="flex justify-center gap-2 pt-2">
+                  <div className="flex justify-end pt-2">
                     <Button
                       onClick={() => openDirectionsFromCurrentLocation(incident.latitude, incident.longitude)}
                       size="sm"
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       <Navigation className="w-4 h-4 mr-2" />
-                      Get Directions
-                    </Button>
-                    <Button
-                      onClick={() => handleRemoveIncident(incident.id)}
-                      size="sm"
-                      variant="destructive"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Remove
+                      Directions
                     </Button>
                   </div>
                 </div>

@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface LostPerson {
@@ -26,26 +27,6 @@ class LostAndFoundService {
 
   constructor() {
     this.loadFromStorage();
-    this.initializeStorage();
-  }
-
-  // Initialize storage bucket if it doesn't exist
-  private async initializeStorage() {
-    try {
-      const { data: buckets } = await supabase.storage.listBuckets();
-      const photoBucketExists = buckets?.some(bucket => bucket.name === 'photos');
-      
-      if (!photoBucketExists) {
-        await supabase.storage.createBucket('photos', {
-          public: true,
-          allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-          fileSizeLimit: 5242880 // 5MB
-        });
-        console.log('Created photos storage bucket');
-      }
-    } catch (error) {
-      console.error('Error initializing storage:', error);
-    }
   }
 
   // Load cached data from localStorage on initialization
@@ -243,26 +224,19 @@ class LostAndFoundService {
   async uploadPhoto(file: File): Promise<string | null> {
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const fileName = `${Date.now()}.${fileExt}`;
       const filePath = `lost-persons/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
+      const { error } = await supabase.storage
         .from('photos')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
+        .upload(filePath, file);
 
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        throw uploadError;
-      }
+      if (error) throw error;
 
       const { data } = supabase.storage
         .from('photos')
         .getPublicUrl(filePath);
 
-      console.log('Photo uploaded successfully:', data.publicUrl);
       return data.publicUrl;
     } catch (error) {
       console.error('Error uploading photo:', error);
