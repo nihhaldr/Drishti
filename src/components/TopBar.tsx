@@ -22,9 +22,8 @@ export const TopBar = ({ onToggleAlerts }: { onToggleAlerts?: () => void }) => {
     // Fetch alert count
     const fetchAlertCount = async () => {
       try {
-        const alerts = await alertService.getAll();
-        const activeAlerts = alerts.filter(alert => alert.is_active);
-        setAlertCount(activeAlerts.length);
+        const alerts = await alertService.getActive();
+        setAlertCount(alerts.length);
       } catch (error) {
         console.error('Error fetching alerts:', error);
         setAlertCount(0);
@@ -141,9 +140,8 @@ export const TopBar = ({ onToggleAlerts }: { onToggleAlerts?: () => void }) => {
       });
       
       // Refresh alert count
-      const alerts = await alertService.getAll();
-      const activeAlerts = alerts.filter(alert => alert.is_active);
-      setAlertCount(activeAlerts.length);
+      const alerts = await alertService.getActive();
+      setAlertCount(alerts.length);
       
       toast.error('Emergency Alert Activated - Siren Sound Played');
     } catch (error) {
