@@ -3,26 +3,45 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Users, AlertTriangle, TrendingUp, RefreshCw } from 'lucide-react';
+import { MapPin, Users, AlertTriangle, TrendingUp, RefreshCw, Navigation } from 'lucide-react';
 import { crowdDataService, LocationData } from '@/services/crowdDataService';
+import { incidentService, Incident } from '@/services/incidentService';
 import { toast } from 'sonner';
 
 export const LiveEventMap = () => {
   const [locations, setLocations] = useState<LocationData[]>([]);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
   useEffect(() => {
     // Initialize with shared data
     setLocations(crowdDataService.getLocations());
     
-    // Subscribe to changes
-    const unsubscribe = crowdDataService.subscribe((newLocations) => {
+    // Subscribe to crowd data changes
+    const unsubscribeCrowd = crowdDataService.subscribe((newLocations) => {
       setLocations(newLocations);
       setLastUpdate(new Date());
     });
 
-    return unsubscribe;
+    // Load and subscribe to incidents
+    const loadIncidents = async () => {
+      const incidentData = await incidentService.getAll();
+      setIncidents(incidentData);
+    };
+
+    loadIncidents();
+
+    const unsubscribeIncidents = incidentService.subscribe((newIncidents) => {
+      setIncidents(newIncidents);
+      setLastUpdate(new Date());
+    });
+
+    return () => {
+      unsubscribeCrowd();
+      unsubscribeIncidents();
+    };
   }, []);
 
   const getDensityColor = (density: number) => {
@@ -37,23 +56,46 @@ export const LiveEventMap = () => {
     return <div className="w-3 h-3 bg-gray-400 rounded-full" />;
   };
 
+  const getIncidentPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'critical': return 'bg-red-600';
+      case 'high': return 'bg-red-500';
+      case 'medium': return 'bg-orange-500';
+      case 'low': return 'bg-yellow-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const openGoogleMaps = (latitude?: number, longitude?: number, locationName?: string) => {
+    if (latitude && longitude) {
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+      window.open(url, '_blank');
+    } else if (locationName) {
+      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationName)}`;
+      window.open(url, '_blank');
+    } else {
+      toast.error('Location information not available');
+    }
+  };
+
   const refreshData = async () => {
     try {
       await crowdDataService.refreshFromService();
+      await incidentService.refresh();
       toast.success('Map data refreshed');
     } catch (error) {
       toast.error('Failed to refresh data');
     }
   };
 
-  if (locations.length === 0) {
+  if (locations.length === 0 && incidents.length === 0) {
     return (
       <div className="h-full flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
         <div className="text-center p-8">
           <MapPin className="w-12 h-12 mx-auto text-gray-400 mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No Event Data Available</h3>
           <p className="text-gray-600 mb-4">
-            Add crowd data in the Crowd Analysis section to visualize locations on the map.
+            Add crowd data or incidents to visualize locations on the map.
           </p>
         </div>
       </div>
@@ -87,7 +129,7 @@ export const LiveEventMap = () => {
           </div>
         </div>
 
-        {/* Location markers positioned across the map */}
+        {/* Crowd location markers */}
         {locations.map((location, index) => {
           const positions = [
             { top: '20%', left: '25%' },
@@ -104,10 +146,13 @@ export const LiveEventMap = () => {
           
           return (
             <div
-              key={location.name}
+              key={`crowd-${location.name}`}
               className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
               style={{ top: position.top, left: position.left }}
-              onClick={() => setSelectedLocation(selectedLocation === location.name ? null : location.name)}
+              onClick={() => {
+                setSelectedLocation(selectedLocation === location.name ? null : location.name);
+                setSelectedIncident(null);
+              }}
             >
               {/* Marker */}
               <div className={`relative ${getDensityColor(location.density)} rounded-full p-2 shadow-lg transition-all group-hover:scale-110`}>
@@ -126,9 +171,52 @@ export const LiveEventMap = () => {
             </div>
           );
         })}
+
+        {/* Incident markers (red dots) */}
+        {incidents.filter(incident => incident.status !== 'closed' && incident.status !== 'resolved').map((incident, index) => {
+          const incidentPositions = [
+            { top: '30%', left: '35%' },
+            { top: '50%', left: '60%' },
+            { top: '70%', left: '20%' },
+            { top: '15%', left: '75%' },
+            { top: '85%', left: '45%' },
+            { top: '25%', left: '55%' },
+            { top: '65%', left: '80%' },
+            { top: '45%', left: '25%' }
+          ];
+          
+          const position = incidentPositions[index % incidentPositions.length];
+          
+          return (
+            <div
+              key={`incident-${incident.id}`}
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
+              style={{ top: position.top, left: position.left }}
+              onClick={() => {
+                setSelectedIncident(selectedIncident === incident.id ? null : incident.id);
+                setSelectedLocation(null);
+              }}
+            >
+              {/* Red dot marker for incidents */}
+              <div className={`relative ${getIncidentPriorityColor(incident.priority)} rounded-full p-2 shadow-lg transition-all group-hover:scale-110`}>
+                <AlertTriangle className="w-4 h-4 text-white" />
+                {incident.priority === 'critical' && (
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-800 rounded-full animate-pulse"></div>
+                )}
+              </div>
+
+              {/* Tooltip */}
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <div className="bg-red-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
+                  {incident.title}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Location details panel */}
+      {/* Location/Incident details panel */}
       <div className="bg-white border-t p-4 max-h-64 overflow-y-auto">
         {selectedLocation ? (
           <div>
@@ -172,6 +260,70 @@ export const LiveEventMap = () => {
                       <span className="text-sm">High density alert - Immediate attention required</span>
                     </div>
                   )}
+
+                  <div className="flex justify-end pt-2">
+                    <Button
+                      onClick={() => openGoogleMaps(undefined, undefined, location.name)}
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Navigation className="w-4 h-4 mr-2" />
+                      Directions
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        ) : selectedIncident ? (
+          <div>
+            {(() => {
+              const incident = incidents.find(inc => inc.id === selectedIncident);
+              if (!incident) return null;
+              
+              return (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-lg font-semibold text-gray-900">{incident.title}</h4>
+                    <div className="flex items-center gap-2">
+                      <Badge className={`${getIncidentPriorityColor(incident.priority)} text-white`}>
+                        {incident.priority.toUpperCase()}
+                      </Badge>
+                      <Badge variant="outline">
+                        {incident.status.toUpperCase()}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  {incident.description && (
+                    <p className="text-sm text-gray-600">{incident.description}</p>
+                  )}
+                  
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Type:</span>
+                      <span className="font-medium ml-2 capitalize">{incident.incident_type.replace('_', ' ')}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Location:</span>
+                      <span className="font-medium ml-2">{incident.location_name || 'Not specified'}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="text-xs text-gray-500">
+                    Created: {new Date(incident.created_at).toLocaleString()}
+                  </div>
+
+                  <div className="flex justify-end pt-2">
+                    <Button
+                      onClick={() => openGoogleMaps(incident.latitude, incident.longitude, incident.location_name)}
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Navigation className="w-4 h-4 mr-2" />
+                      Directions
+                    </Button>
+                  </div>
                 </div>
               );
             })()}
@@ -179,7 +331,7 @@ export const LiveEventMap = () => {
         ) : (
           <div className="text-center text-gray-600">
             <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Click on a location marker to view details</p>
+            <p className="text-sm">Click on a location marker or incident dot to view details</p>
           </div>
         )}
       </div>
@@ -190,20 +342,30 @@ export const LiveEventMap = () => {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span>Low (&lt;60%)</span>
+              <span>Low Crowd (&lt;60%)</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-              <span>Medium (60-80%)</span>
+              <span>Medium Crowd (60-80%)</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span>High (&gt;80%)</span>
+              <span>High Crowd (&gt;80%)</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3 text-red-600" />
+              <span>Active Incidents</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-gray-500" />
-            <span>Total: {locations.reduce((sum, loc) => sum + loc.current, 0).toLocaleString()}</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-gray-500" />
+              <span>Total: {locations.reduce((sum, loc) => sum + loc.current, 0).toLocaleString()}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-500" />
+              <span>Incidents: {incidents.filter(inc => inc.status !== 'closed' && inc.status !== 'resolved').length}</span>
+            </div>
           </div>
         </div>
       </div>
