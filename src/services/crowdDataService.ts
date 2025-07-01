@@ -37,6 +37,20 @@ class CrowdDataService {
     this.notifySubscribers();
   }
 
+  public updateLocation(locationData: LocationData): void {
+    const existingIndex = this.locations.findIndex(loc => loc.name === locationData.name);
+    
+    if (existingIndex >= 0) {
+      // Update existing location
+      this.locations[existingIndex] = { ...locationData };
+    } else {
+      // Add new location
+      this.locations.push({ ...locationData });
+    }
+    
+    this.notifySubscribers();
+  }
+
   public subscribe(callback: (locations: LocationData[]) => void): () => void {
     this.subscribers.push(callback);
     return () => {
