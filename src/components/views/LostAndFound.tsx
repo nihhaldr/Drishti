@@ -181,6 +181,8 @@ export const LostAndFound = () => {
       }
       setActiveTab('cases');
       toast.success('Missing person report submitted successfully');
+      // Refresh the list to show the new entry
+      await loadLostPersons();
     } else {
       toast.error('Failed to submit report. Please try again.');
     }
@@ -282,11 +284,17 @@ export const LostAndFound = () => {
             lostPersons.map(person => (
               <Card key={person.id} className="bg-white border-gray-200 p-6">
                 <div className="flex gap-4">
-                  <img 
-                    src={person.photo_url} 
-                    alt={person.name}
-                    className="w-20 h-20 rounded-lg object-cover"
-                  />
+                  <div className="flex-shrink-0">
+                    <img 
+                      src={person.photo_url || '/placeholder.svg'} 
+                      alt={person.name}
+                      className="w-20 h-20 rounded-lg object-cover border border-gray-200"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/placeholder.svg';
+                      }}
+                    />
+                  </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="text-lg font-semibold">{person.name}</h3>
@@ -420,6 +428,15 @@ export const LostAndFound = () => {
                 <p className="text-gray-600">
                   {newReport.photo ? newReport.photo.name : 'Click to upload or drag and drop'}
                 </p>
+                {newReport.photo && (
+                  <div className="mt-2">
+                    <img 
+                      src={URL.createObjectURL(newReport.photo)} 
+                      alt="Preview" 
+                      className="mx-auto w-20 h-20 object-cover rounded border"
+                    />
+                  </div>
+                )}
               </div>
             </div>
             <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white">
