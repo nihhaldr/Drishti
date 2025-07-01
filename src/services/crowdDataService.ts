@@ -1,12 +1,14 @@
-
 import { crowdService, CrowdMetric } from '@/services/crowdService';
 
 export interface LocationData {
   name: string;
-  density: number;
-  trend: 'up' | 'down' | 'stable';
   capacity: number;
   current: number;
+  density: number;
+  trend: 'up' | 'down' | 'stable';
+  timestamp?: Date;
+  latitude?: number;
+  longitude?: number;
 }
 
 const STORAGE_KEY = 'drishti_crowd_data';
@@ -62,10 +64,15 @@ class CrowdDataService {
   public updateLocation(locationData: LocationData): void {
     const existingIndex = this.locations.findIndex(loc => loc.name === locationData.name);
     
+    const updatedLocation = {
+      ...locationData,
+      timestamp: new Date()
+    };
+
     if (existingIndex >= 0) {
-      this.locations[existingIndex] = { ...locationData };
+      this.locations[existingIndex] = updatedLocation;
     } else {
-      this.locations.push({ ...locationData });
+      this.locations.push(updatedLocation);
     }
     
     this.saveToCache();
@@ -196,4 +203,4 @@ class CrowdDataService {
   }
 }
 
-export const crowdDataService = CrowdDataService.getInstance();
+export const crowdDataService = new CrowdDataService();

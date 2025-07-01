@@ -15,6 +15,8 @@ interface ManualDataEntry {
   density: number;
   trend: 'up' | 'down' | 'stable';
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  latitude?: number;
+  longitude?: number;
 }
 
 interface ManualDataFormProps {
@@ -30,10 +32,18 @@ export const ManualDataForm = ({ editingLocation, onSave, onCancel }: ManualData
     currentCount: editingLocation?.current || 0,
     density: editingLocation?.density || 0,
     trend: editingLocation?.trend || 'stable',
-    riskLevel: 'low'
+    riskLevel: 'low',
+    latitude: editingLocation?.latitude,
+    longitude: editingLocation?.longitude
   });
 
-  const [selectedMapLocation, setSelectedMapLocation] = useState<{name: string; latitude: number; longitude: number} | null>(null);
+  const [selectedMapLocation, setSelectedMapLocation] = useState<{name: string; latitude: number; longitude: number} | null>(
+    editingLocation ? {
+      name: editingLocation.name,
+      latitude: editingLocation.latitude || 0,
+      longitude: editingLocation.longitude || 0
+    } : null
+  );
 
   const calculateDensity = (current: number, capacity: number) => {
     return capacity > 0 ? Math.round((current / capacity) * 100) : 0;
@@ -73,6 +83,16 @@ export const ManualDataForm = ({ editingLocation, onSave, onCancel }: ManualData
     }));
   };
 
+  const handleLocationSelect = (location: {name: string; latitude: number; longitude: number}) => {
+    setSelectedMapLocation(location);
+    setEntry(prev => ({
+      ...prev,
+      location: location.name,
+      latitude: location.latitude,
+      longitude: location.longitude
+    }));
+  };
+
   const handleSave = () => {
     if (!entry.location.trim()) {
       toast.error('Please enter a location name');
@@ -89,7 +109,9 @@ export const ManualDataForm = ({ editingLocation, onSave, onCancel }: ManualData
       capacity: entry.capacity,
       current: entry.currentCount,
       density: entry.density,
-      trend: entry.trend
+      trend: entry.trend,
+      latitude: entry.latitude,
+      longitude: entry.longitude
     });
 
     toast.success(`Data ${editingLocation ? 'updated' : 'saved'} for ${entry.location}`);
@@ -97,11 +119,19 @@ export const ManualDataForm = ({ editingLocation, onSave, onCancel }: ManualData
   };
 
   const getExistingLocations = () => {
-    return crowdDataService.getLocations().map(loc => ({
-      name: loc.name,
-      latitude: Math.random() * 180 - 90, // Mock coordinates for demo
-      longitude: Math.random() * 360 - 180
-    }));
+    return crowdDataService.getLocations()
+      .filter(loc => loc.latitude && loc.longitude)
+      .map(loc => ({
+        name: loc.name,
+        latitude: loc.latitude!,
+        longitude: loc.longitude!
+      }));
+  };
+
+  const handleRemoveLocation = (location: {name: string; latitude: number; longitude: number}) => {
+    // Remove from crowd data service if it exists there
+    crowdDataService.removeLocation(location.name);
+    toast.success(`Removed ${location.name} from existing locations`);
   };
 
   return (
@@ -187,17 +217,13 @@ export const ManualDataForm = ({ editingLocation, onSave, onCancel }: ManualData
       <div className="space-y-2">
         <label className="text-sm font-medium block">Map Location</label>
         <LocationPicker
-          onLocationSelect={setSelectedMapLocation}
+          onLocationSelect={handleLocationSelect}
           selectedLocation={selectedMapLocation}
           existingLocations={getExistingLocations()}
           buttonText="Add Location"
           buttonVariant="outline"
+          onRemoveLocation={handleRemoveLocation}
         />
-        {selectedMapLocation && (
-          <div className="text-sm text-muted-foreground">
-            Selected: {selectedMapLocation.name}
-          </div>
-        )}
       </div>
 
       <div className="flex gap-2 pt-4">

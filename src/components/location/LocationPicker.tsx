@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Navigation, ExternalLink, Loader2, AlertTriangle } from 'lucide-react';
+import { MapPin, Navigation, ExternalLink, Loader2, AlertTriangle, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
@@ -18,6 +18,7 @@ interface LocationPickerProps {
   existingLocations?: Location[];
   buttonText?: string;
   buttonVariant?: 'default' | 'outline' | 'ghost';
+  onRemoveLocation?: (location: Location) => void;
 }
 
 export const LocationPicker = ({ 
@@ -25,7 +26,8 @@ export const LocationPicker = ({
   selectedLocation, 
   existingLocations = [],
   buttonText = "Add Location",
-  buttonVariant = "outline"
+  buttonVariant = "outline",
+  onRemoveLocation
 }: LocationPickerProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -93,6 +95,13 @@ export const LocationPicker = ({
     toast.success(`Location selected: ${location.name}`);
   };
 
+  const handleRemoveLocation = (location: Location) => {
+    if (onRemoveLocation) {
+      onRemoveLocation(location);
+      toast.success(`Removed location: ${location.name}`);
+    }
+  };
+
   const openGoogleMaps = (lat: number, lng: number) => {
     const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
     window.open(url, '_blank');
@@ -110,131 +119,150 @@ export const LocationPicker = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant={buttonVariant} className="flex items-center gap-2">
-          <MapPin className="w-4 h-4" />
-          {buttonText}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Select Location</DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4">
-          {/* Current Location Section */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="font-medium">Current Location</h4>
-              <Button 
-                onClick={getCurrentLocation} 
-                size="sm" 
-                disabled={loading}
-                variant="outline"
-              >
-                {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                ) : (
-                  <Navigation className="w-4 h-4 mr-2" />
-                )}
-                Detect Location
-              </Button>
+    <div className="space-y-3">
+      {/* Selected Location Display */}
+      {selectedLocation && (
+        <Card className="p-3 border-blue-200 bg-blue-50">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <Badge className="bg-blue-100 text-blue-800 mb-2">
+                Selected Location
+              </Badge>
+              <p className="text-sm font-medium text-blue-800">{selectedLocation.name}</p>
+              <p className="text-xs text-blue-600">
+                {selectedLocation.latitude.toFixed(4)}, {selectedLocation.longitude.toFixed(4)}
+              </p>
             </div>
-
-            {error && (
-              <div className="flex items-center gap-2 p-2 bg-red-50 border border-red-200 rounded text-red-700">
-                <AlertTriangle className="w-4 h-4" />
-                <span className="text-sm">{error}</span>
-              </div>
-            )}
-
-            {currentLocation && (
-              <Card className="p-3 border-green-200 bg-green-50">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-green-800">{locationName}</p>
-                    <p className="text-xs text-green-600">
-                      {currentLocation.lat.toFixed(4)}, {currentLocation.lng.toFixed(4)}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => openGoogleMaps(currentLocation.lat, currentLocation.lng)}
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={addCurrentLocation}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      Select
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => openGoogleMaps(selectedLocation.latitude, selectedLocation.longitude)}
+              className="text-blue-600 hover:text-blue-700"
+            >
+              <ExternalLink className="w-3 h-3" />
+            </Button>
           </div>
+        </Card>
+      )}
 
-          {/* Existing Locations */}
-          {existingLocations.length > 0 && (
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Button variant={buttonVariant} className="flex items-center gap-2">
+            <MapPin className="w-4 h-4" />
+            {buttonText}
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select Location</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Current Location Section */}
             <div className="space-y-3">
-              <h4 className="font-medium">Existing Locations</h4>
-              <div className="max-h-48 overflow-y-auto space-y-2">
-                {existingLocations.map((location, index) => (
-                  <Card key={index} className="p-3 hover:bg-gray-50 cursor-pointer transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{location.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => openGoogleMaps(location.latitude, location.longitude)}
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleLocationSelect(location)}
-                          variant="outline"
-                        >
-                          Select
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Selected Location Display */}
-          {selectedLocation && (
-            <div className="pt-3 border-t">
-              <div className="flex items-center gap-2">
-                <Badge className="bg-blue-100 text-blue-800">
-                  Selected: {selectedLocation.name}
-                </Badge>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => openGoogleMaps(selectedLocation.latitude, selectedLocation.longitude)}
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium">Current Location</h4>
+                <Button 
+                  onClick={getCurrentLocation} 
+                  size="sm" 
+                  disabled={loading}
+                  variant="outline"
                 >
-                  <ExternalLink className="w-3 h-3" />
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <Navigation className="w-4 h-4 mr-2" />
+                  )}
+                  Detect Location
                 </Button>
               </div>
+
+              {error && (
+                <div className="flex items-center gap-2 p-2 bg-red-50 border border-red-200 rounded text-red-700">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span className="text-sm">{error}</span>
+                </div>
+              )}
+
+              {currentLocation && (
+                <Card className="p-3 border-green-200 bg-green-50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-green-800">{locationName}</p>
+                      <p className="text-xs text-green-600">
+                        {currentLocation.lat.toFixed(4)}, {currentLocation.lng.toFixed(4)}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => openGoogleMaps(currentLocation.lat, currentLocation.lng)}
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={addCurrentLocation}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        Select
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              )}
             </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+
+            {/* Existing Locations */}
+            {existingLocations.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="font-medium">Existing Locations</h4>
+                <div className="max-h-48 overflow-y-auto space-y-2">
+                  {existingLocations.map((location, index) => (
+                    <Card key={index} className="p-3 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{location.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openGoogleMaps(location.latitude, location.longitude)}
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </Button>
+                          {onRemoveLocation && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleRemoveLocation(location)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            onClick={() => handleLocationSelect(location)}
+                            variant="outline"
+                          >
+                            Select
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };

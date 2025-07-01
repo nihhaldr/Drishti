@@ -19,13 +19,11 @@ export const LiveEventMap = () => {
     // Initialize with shared data
     setLocations(crowdDataService.getLocations());
     
-    // Subscribe to crowd data changes
     const unsubscribeCrowd = crowdDataService.subscribe((newLocations) => {
       setLocations(newLocations);
       setLastUpdate(new Date());
     });
 
-    // Load and subscribe to incidents
     const loadIncidents = async () => {
       const incidentData = await incidentService.getAll();
       setIncidents(incidentData);
@@ -66,15 +64,32 @@ export const LiveEventMap = () => {
     }
   };
 
-  const openGoogleMaps = (latitude?: number, longitude?: number, locationName?: string) => {
-    if (latitude && longitude) {
-      const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
-      window.open(url, '_blank');
-    } else if (locationName) {
-      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationName)}`;
-      window.open(url, '_blank');
+  const openDirectionsFromCurrentLocation = (destinationLat?: number, destinationLng?: number) => {
+    if (!destinationLat || !destinationLng) {
+      toast.error('Location coordinates not available');
+      return;
+    }
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude: currentLat, longitude: currentLng } = position.coords;
+          const url = `https://www.google.com/maps/dir/${currentLat},${currentLng}/${destinationLat},${destinationLng}`;
+          window.open(url, '_blank');
+        },
+        (error) => {
+          // Fallback to directions without current location
+          const url = `https://www.google.com/maps/dir/?api=1&destination=${destinationLat},${destinationLng}`;
+          window.open(url, '_blank');
+          toast.error('Could not get current location, opening directions anyway');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      );
     } else {
-      toast.error('Location information not available');
+      // Fallback for browsers without geolocation
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${destinationLat},${destinationLng}`;
+      window.open(url, '_blank');
+      toast.error('Geolocation not supported, opening directions anyway');
     }
   };
 
@@ -263,7 +278,7 @@ export const LiveEventMap = () => {
 
                   <div className="flex justify-end pt-2">
                     <Button
-                      onClick={() => openGoogleMaps(undefined, undefined, location.name)}
+                      onClick={() => openDirectionsFromCurrentLocation(location.latitude, location.longitude)}
                       size="sm"
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
@@ -316,7 +331,7 @@ export const LiveEventMap = () => {
 
                   <div className="flex justify-end pt-2">
                     <Button
-                      onClick={() => openGoogleMaps(incident.latitude, incident.longitude, incident.location_name)}
+                      onClick={() => openDirectionsFromCurrentLocation(incident.latitude, incident.longitude)}
                       size="sm"
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
