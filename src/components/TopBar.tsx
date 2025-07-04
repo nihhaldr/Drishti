@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { Search, Bell } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { alertService } from '@/services/alertService';
 import { toast } from 'sonner';
 
@@ -13,7 +12,6 @@ interface LocationData {
 }
 
 export const TopBar = ({ onToggleAlerts }: { onToggleAlerts?: () => void }) => {
-  const [query, setQuery] = useState('');
   const [alertCount, setAlertCount] = useState(0);
   const [currentLocation, setCurrentLocation] = useState<LocationData | null>(null);
   const [locationLoading, setLocationLoading] = useState(true);
@@ -143,42 +141,12 @@ export const TopBar = ({ onToggleAlerts }: { onToggleAlerts?: () => void }) => {
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (query.trim()) {
-      console.log('Searching for:', query);
-      // Add search analytics
-      if (typeof gtag !== 'undefined') {
-        gtag('event', 'search', {
-          search_term: query,
-          event_category: 'Drishti Search',
-          event_label: 'AI Command Search'
-        });
-      }
-      
-      // Display search results (this would typically integrate with your AI system)
-      toast.info(`Searching for: "${query}"`);
-      
-      // Here you would typically call your AI search service
-      // searchService.query(query);
-    }
-  };
-
   return (
     <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm">
-      {/* Search */}
-      <form onSubmit={handleSearch} className="flex-1 max-w-2xl relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Ask Drishti AI anything... (e.g., 'Show me crowd density at Gate 3')"
-          className="pl-10 bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:border-google-blue focus:ring-google-blue/20"
-          title="Search Drishti AI - Event Security Intelligence"
-          aria-label="Search Drishti AI for security insights and commands"
-        />
-        <button type="submit" className="sr-only">Search</button>
-      </form>
+      {/* Left side - Project Title */}
+      <div>
+        <h1 className="text-xl font-bold text-gray-800">Drishti Command Center</h1>
+      </div>
 
       {/* Right side actions */}
       <div className="flex items-center gap-4">

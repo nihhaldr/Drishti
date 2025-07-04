@@ -4,27 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Search, Upload, User, Clock, Camera, Zap, MapPin, Play, Eye } from 'lucide-react';
+import { Upload, User, Camera, Zap, MapPin, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { lostAndFoundService, LostPerson } from '@/services/lostAndFoundService';
 import { useRealtime } from '@/hooks/useRealtime';
 
-interface SearchResult {
-  personId: string;
-  cameraId: string;
-  location: string;
-  timestamp: string;
-  confidence: number;
-  imageUrl: string;
-  coordinates: { lat: number; lng: number };
-}
-
 export const LostAndFound = () => {
   const [activeTab, setActiveTab] = useState<'report' | 'search' | 'cases'>('cases');
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [lostPersonPhoto, setLostPersonPhoto] = useState<File | null>(null);
   const [crowdFootage, setCrowdFootage] = useState<File | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
   const [lostPersons, setLostPersons] = useState<LostPerson[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -103,41 +91,8 @@ export const LostAndFound = () => {
   };
 
   const handleFindPerson = async () => {
-    if (!lostPersonPhoto || !crowdFootage) {
-      toast.error('Please upload both lost person photo and crowd footage');
-      return;
-    }
-
-    setIsSearching(true);
-    toast.info('Searching for person in crowd footage...');
-
-    // Simulate AI search process
-    setTimeout(() => {
-      const mockResults: SearchResult[] = [
-        {
-          personId: 'search-1',
-          cameraId: 'CAM-12',
-          location: 'Main Entrance Gate',
-          timestamp: new Date(Date.now() - 15 * 60000).toLocaleTimeString(),
-          confidence: 92,
-          imageUrl: '/placeholder.svg',
-          coordinates: { lat: 40.7128, lng: -74.0060 }
-        },
-        {
-          personId: 'search-2',
-          cameraId: 'CAM-07',
-          location: 'Food Court - Central Area',
-          timestamp: new Date(Date.now() - 8 * 60000).toLocaleTimeString(),
-          confidence: 88,
-          imageUrl: '/placeholder.svg',
-          coordinates: { lat: 40.7130, lng: -74.0058 }
-        }
-      ];
-
-      setSearchResults(mockResults);
-      setIsSearching(false);
-      toast.success(`Found ${mockResults.length} potential matches!`);
-    }, 3000);
+    // Do nothing - as requested by user
+    toast.info('Search functionality is currently disabled');
   };
 
   const handleSubmitReport = async (e: React.FormEvent) => {
@@ -213,12 +168,6 @@ export const LostAndFound = () => {
     }
   };
 
-  const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 90) return 'bg-green-500';
-    if (confidence >= 80) return 'bg-yellow-500';
-    return 'bg-orange-500';
-  };
-
   return (
     <div className="p-6 space-y-6 bg-white min-h-screen">
       <div className="flex items-center justify-between">
@@ -235,7 +184,7 @@ export const LostAndFound = () => {
       {/* Tab Navigation */}
       <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg w-fit">
         {[
-          { id: 'cases', label: 'Active Cases', icon: Search },
+          { id: 'cases', label: 'Active Cases', icon: User },
           { id: 'report', label: 'Report Missing', icon: User },
           { id: 'search', label: 'Lost Person Finder', icon: Camera }
         ].map(tab => {
@@ -436,7 +385,7 @@ export const LostAndFound = () => {
             <Card className="bg-white border border-gray-200 rounded-lg shadow-sm">
               <div className="p-8">
                 <div className="flex items-center gap-3 mb-2">
-                  <Search className="w-6 h-6 text-primary" />
+                  <Camera className="w-6 h-6 text-primary" />
                   <h1 className="text-2xl font-bold text-gray-900">Lost Person Finder</h1>
                 </div>
                 <p className="text-gray-600 mb-8">Use AI to find a lost person in crowd footage.</p>
@@ -486,76 +435,12 @@ export const LostAndFound = () => {
 
                   <Button
                     onClick={handleFindPerson}
-                    disabled={isSearching || !lostPersonPhoto || !crowdFootage}
+                    disabled={!lostPersonPhoto || !crowdFootage}
                     className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-lg"
                   >
-                    {isSearching ? 'Searching...' : 'Find Person'}
+                    Find Person
                   </Button>
                 </div>
-
-                {searchResults.length > 0 && (
-                  <div className="mt-8 space-y-4">
-                    <h3 className="text-xl font-semibold mb-4">Search Results</h3>
-                    {searchResults.map((result, index) => (
-                      <div key={index} className="border rounded-lg p-4 bg-gray-50">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <Badge className={`${getConfidenceColor(result.confidence)} text-white`}>
-                              {result.confidence}% Match
-                            </Badge>
-                            <span className="font-medium">{result.location}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <Clock className="w-4 h-4" />
-                            {result.timestamp}
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div>
-                            <img 
-                              src={result.imageUrl} 
-                              alt="Detection"
-                              className="w-full h-32 rounded object-cover"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">Camera: {result.cameraId}</p>
-                          </div>
-                          
-                          <div className="md:col-span-2 space-y-3">
-                            <div className="flex items-center gap-2">
-                              <MapPin className="w-4 h-4 text-red-500" />
-                              <span className="font-medium">Location Details:</span>
-                            </div>
-                            <div className="bg-white p-3 rounded border">
-                              <p className="font-medium">{result.location}</p>
-                              <p className="text-sm text-gray-600">
-                                Coordinates: {result.coordinates.lat.toFixed(6)}, {result.coordinates.lng.toFixed(6)}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                Last seen: {result.timestamp}
-                              </p>
-                            </div>
-                            
-                            <div className="flex gap-2">
-                              <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                                <Eye className="w-4 h-4 mr-1" />
-                                View Live Feed
-                              </Button>
-                              <Button size="sm" variant="outline">
-                                <Play className="w-4 h-4 mr-1" />
-                                View Recording
-                              </Button>
-                              <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                                <MapPin className="w-4 h-4 mr-1" />
-                                Navigate to Location
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             </Card>
           </div>
