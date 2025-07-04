@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, TrendingUp, Users, Clock, MapPin, RefreshCw } from 'lucide-react';
 import { crowdDataService, LocationData } from '@/services/crowdDataService';
 import { toast } from 'sonner';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 interface BottleneckData {
   location: string;
@@ -106,6 +107,16 @@ export const BottleneckAnalysis = () => {
     setBottlenecks(analysis);
   };
 
+  // Prepare chart data
+  const chartData = bottlenecks.map(bottleneck => ({
+    location: bottleneck.location.length > 10 ? bottleneck.location.substring(0, 10) + '...' : bottleneck.location,
+    waitTime: bottleneck.waitTime,
+    throughput: bottleneck.throughput,
+    utilization: Math.round((bottleneck.current / bottleneck.capacity) * 100),
+    capacity: bottleneck.capacity,
+    current: bottleneck.current
+  }));
+
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'critical': return 'bg-red-600 text-white';
@@ -168,6 +179,53 @@ export const BottleneckAnalysis = () => {
               Refresh Analysis
             </Button>
           </div>
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Wait Time Analysis Chart */}
+          <Card className="p-6 bg-white">
+            <h3 className="text-lg font-semibold mb-4">Wait Time Analysis</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="location" />
+                <YAxis />
+                <Tooltip 
+                  formatter={(value, name) => [
+                    name === 'waitTime' ? `${value} minutes` : value,
+                    name === 'waitTime' ? 'Wait Time' : name
+                  ]}
+                />
+                <Legend />
+                <Bar dataKey="waitTime" fill="#ef4444" name="Wait Time (min)" />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+
+          {/* Capacity Utilization Chart */}
+          <Card className="p-6 bg-white">
+            <h3 className="text-lg font-semibold mb-4">Capacity Utilization</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="location" />
+                <YAxis />
+                <Tooltip 
+                  formatter={(value, name) => [
+                    name === 'utilization' ? `${value}%` : value,
+                    name === 'utilization' ? 'Utilization' : 
+                    name === 'current' ? 'Current Occupancy' : 
+                    'Max Capacity'
+                  ]}
+                />
+                <Legend />
+                <Line type="monotone" dataKey="utilization" stroke="#f59e0b" strokeWidth={3} name="Utilization %" />
+                <Line type="monotone" dataKey="current" stroke="#3b82f6" strokeWidth={2} name="Current" />
+                <Line type="monotone" dataKey="capacity" stroke="#10b981" strokeWidth={2} name="Capacity" />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
         </div>
 
         {/* Summary Cards */}

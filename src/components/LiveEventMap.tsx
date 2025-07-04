@@ -1,18 +1,20 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Users, AlertTriangle, TrendingUp, RefreshCw, Navigation } from 'lucide-react';
+import { MapPin, Users, AlertTriangle, TrendingUp, RefreshCw, Navigation, Siren } from 'lucide-react';
 import { crowdDataService, LocationData } from '@/services/crowdDataService';
 import { incidentService, Incident } from '@/services/incidentService';
+import { alertService, Alert } from '@/services/alertService';
 import { toast } from 'sonner';
 
 export const LiveEventMap = () => {
   const [locations, setLocations] = useState<LocationData[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
+  const [selectedAlert, setSelectedAlert] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
   useEffect(() => {
@@ -29,7 +31,17 @@ export const LiveEventMap = () => {
       setIncidents(incidentData);
     };
 
+    const loadAlerts = async () => {
+      try {
+        const alertData = await alertService.getActive();
+        setAlerts(alertData);
+      } catch (error) {
+        console.error('Error loading alerts:', error);
+      }
+    };
+
     loadIncidents();
+    loadAlerts();
 
     const unsubscribeIncidents = incidentService.subscribe((newIncidents) => {
       setIncidents(newIncidents);
@@ -58,6 +70,16 @@ export const LiveEventMap = () => {
     switch (priority) {
       case 'critical': return 'bg-red-600';
       case 'high': return 'bg-red-500';
+      case 'medium': return 'bg-orange-500';
+      case 'low': return 'bg-yellow-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getAlertSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'bg-red-700';
+      case 'high': return 'bg-red-600';
       case 'medium': return 'bg-orange-500';
       case 'low': return 'bg-yellow-500';
       default: return 'bg-gray-500';
@@ -102,20 +124,22 @@ export const LiveEventMap = () => {
     try {
       await crowdDataService.refreshFromService();
       await incidentService.refresh();
+      const alertData = await alertService.getActive();
+      setAlerts(alertData);
       toast.success('Map data refreshed');
     } catch (error) {
       toast.error('Failed to refresh data');
     }
   };
 
-  if (locations.length === 0 && incidents.length === 0) {
+  if (locations.length === 0 && incidents.length === 0 && alerts.length === 0) {
     return (
       <div className="h-full flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
         <div className="text-center p-8">
           <MapPin className="w-12 h-12 mx-auto text-gray-400 mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No Event Data Available</h3>
           <p className="text-gray-600 mb-4">
-            Add crowd data or incidents to visualize locations on the map.
+            Add crowd data, incidents, or emergency alerts to visualize locations on the map.
           </p>
         </div>
       </div>
@@ -149,6 +173,50 @@ export const LiveEventMap = () => {
           </div>
         </div>
 
+        {/* Emergency Alert markers - highest priority */}
+        {alerts.map((alert, index) => {
+          const alertPositions = [
+            { top: '25%', left: '40%' },
+            { top: '55%', left: '65%' },
+            { top: '75%', left: '25%' },
+            { top: '10%', left: '80%' },
+            { top: '90%', left: '50%' },
+            { top: '30%', left: '60%' },
+            { top: '60%', left: '85%' },
+            { top: '40%', left: '30%' }
+          ];
+          
+          const position = alertPositions[index % alertPositions.length];
+          
+          return (
+            <div
+              key={`alert-${alert.id}`}
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-30"
+              style={{ top: position.top, left: position.left }}
+              onClick={() => {
+                setSelectedAlert(selectedAlert === alert.id ? null : alert.id);
+                setSelectedIncident(null);
+                setSelectedLocation(null);
+              }}
+            >
+              {/* Emergency alert marker */}
+              <div className={`relative ${getAlertSeverityColor(alert.severity)} rounded-full p-2 shadow-lg transition-all group-hover:scale-110 animate-pulse`}>
+                <Siren className="w-4 h-4 text-white" />
+                {alert.severity === 'critical' && (
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-900 rounded-full animate-ping"></div>
+                )}
+              </div>
+
+              {/* Tooltip */}
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <div className="bg-red-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
+                  EMERGENCY: {alert.title}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
         {/* Crowd location markers */}
         {locations.map((location, index) => {
           const positions = [
@@ -167,11 +235,12 @@ export const LiveEventMap = () => {
           return (
             <div
               key={`crowd-${location.name}`}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-20"
               style={{ top: position.top, left: position.left }}
               onClick={() => {
                 setSelectedLocation(selectedLocation === location.name ? null : location.name);
                 setSelectedIncident(null);
+                setSelectedAlert(null);
               }}
             >
               {/* Marker */}
@@ -192,7 +261,7 @@ export const LiveEventMap = () => {
           );
         })}
 
-        {/* Incident markers (red dots) */}
+        {/* Incident markers */}
         {incidents.filter(incident => incident.status !== 'closed' && incident.status !== 'resolved').map((incident, index) => {
           const incidentPositions = [
             { top: '30%', left: '35%' },
@@ -210,14 +279,15 @@ export const LiveEventMap = () => {
           return (
             <div
               key={`incident-${incident.id}`}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-10"
               style={{ top: position.top, left: position.left }}
               onClick={() => {
                 setSelectedIncident(selectedIncident === incident.id ? null : incident.id);
                 setSelectedLocation(null);
+                setSelectedAlert(null);
               }}
             >
-              {/* Red dot marker for incidents */}
+              {/* Incident marker */}
               <div className={`relative ${getIncidentPriorityColor(incident.priority)} rounded-full p-2 shadow-lg transition-all group-hover:scale-110`}>
                 <AlertTriangle className="w-4 h-4 text-white" />
                 {incident.priority === 'critical' && (
@@ -236,9 +306,66 @@ export const LiveEventMap = () => {
         })}
       </div>
 
-      {/* Location/Incident details panel */}
+      {/* Location/Incident/Alert details panel */}
       <div className="bg-white border-t p-4 max-h-64 overflow-y-auto">
-        {selectedLocation ? (
+        {selectedAlert ? (
+          <div>
+            {(() => {
+              const alert = alerts.find(a => a.id === selectedAlert);
+              if (!alert) return null;
+              
+              return (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-lg font-semibold text-red-800 flex items-center gap-2">
+                      <Siren className="w-5 h-5" />
+                      EMERGENCY ALERT
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      <Badge className={`${getAlertSeverityColor(alert.severity)} text-white`}>
+                        {alert.severity?.toUpperCase()}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <h5 className="text-lg font-medium text-gray-900">{alert.title}</h5>
+                  
+                  {alert.message && (
+                    <p className="text-sm text-gray-600">{alert.message}</p>
+                  )}
+                  
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Location:</span>
+                      <span className="font-medium ml-2">{alert.location_name || 'Not specified'}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Type:</span>
+                      <span className="font-medium ml-2 capitalize">{alert.alert_type?.replace('_', ' ')}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="text-xs text-gray-500">
+                    Created: {new Date(alert.created_at).toLocaleString()}
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2 border-t">
+                    <div className="text-xs text-red-600 font-medium">
+                      ⚠️ EMERGENCY - Immediate Response Required
+                    </div>
+                    <Button
+                      onClick={() => openDirectionsFromCurrentLocation(alert.latitude, alert.longitude, alert.location_name)}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      <Navigation className="w-4 h-4 mr-2" />
+                      Emergency Directions
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        ) : selectedLocation ? (
           <div>
             {(() => {
               const location = locations.find(loc => loc.name === selectedLocation);
@@ -351,7 +478,7 @@ export const LiveEventMap = () => {
         ) : (
           <div className="text-center text-gray-600">
             <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Click on a location marker or incident dot to view details</p>
+            <p className="text-sm">Click on a location marker, incident dot, or emergency alert to view details</p>
           </div>
         )}
       </div>
@@ -360,6 +487,10 @@ export const LiveEventMap = () => {
       <div className="bg-gray-100 px-4 py-2 border-t">
         <div className="flex items-center justify-between text-xs">
           <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1">
+              <Siren className="w-3 h-3 text-red-700" />
+              <span>Emergency Alerts</span>
+            </div>
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               <span>Low Crowd (&lt;60%)</span>
@@ -378,6 +509,10 @@ export const LiveEventMap = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Siren className="w-4 h-4 text-red-700" />
+              <span>Alerts: {alerts.length}</span>
+            </div>
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-gray-500" />
               <span>Total: {locations.reduce((sum, loc) => sum + loc.current, 0).toLocaleString()}</span>

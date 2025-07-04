@@ -59,6 +59,36 @@ class IncidentService {
 
   constructor() {
     this.loadFromCache();
+    this.setupRealtimeSubscription();
+  }
+
+  private setupRealtimeSubscription(): void {
+    // Subscribe to real-time changes
+    supabase
+      .channel('incidents_channel')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'incidents' }, 
+        (payload) => {
+          console.log('Real-time incident update:', payload);
+          this.handleRealtimeUpdate(payload);
+        }
+      )
+      .subscribe();
+  }
+
+  private handleRealtimeUpdate(payload: any): void {
+    if (payload.eventType === 'INSERT') {
+      this.incidents = [payload.new, ...this.incidents];
+    } else if (payload.eventType === 'UPDATE') {
+      this.incidents = this.incidents.map(incident => 
+        incident.id === payload.new.id ? payload.new : incident
+      );
+    } else if (payload.eventType === 'DELETE') {
+      this.incidents = this.incidents.filter(incident => incident.id !== payload.old.id);
+    }
+    
+    this.saveToCache();
+    this.notifySubscribers();
   }
 
   private loadFromCache(): void {
@@ -185,6 +215,21 @@ class IncidentService {
   async create(incident: CreateIncidentRequest): Promise<Incident> {
     try {
       const user = (await supabase.auth.getUser()).data.user;
+      const newIncident = {
+        ...incident,
+        reported_by: user?.id,
+        status: 'reported' as IncidentStatus,
+        id: `temp_${Date.now()}`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // Add to local cache immediately
+      this.incidents = [newIncident, ...this.incidents];
+      this.saveToCache();
+      this.notifySubscribers();
+
+      // Then try to sync with database
       const { data, error } = await supabase
         .from('incidents')
         .insert([{
@@ -197,8 +242,10 @@ class IncidentService {
 
       if (error) throw error;
       
-      // Update local cache
-      this.incidents = [data, ...this.incidents];
+      // Update local cache with server data
+      this.incidents = this.incidents.map(inc => 
+        inc.id === newIncident.id ? data : inc
+      );
       this.saveToCache();
       this.notifySubscribers();
       return data;
