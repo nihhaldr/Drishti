@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,9 +10,11 @@ import { Badge } from '@/components/ui/badge';
 import { Settings as SettingsIcon, User, Bell, Shield, Camera, Wifi, Save, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-
 export const Settings = () => {
-  const { user, signOut } = useAuth();
+  const {
+    user,
+    signOut
+  } = useAuth();
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState({
     // General Settings
@@ -21,32 +22,27 @@ export const Settings = () => {
     location: 'Event Venue',
     timezone: 'UTC+05:30',
     language: 'en',
-    
     // Notifications
     emailNotifications: true,
     smsNotifications: false,
     pushNotifications: true,
     alertSounds: true,
-    
     // Security
     sessionTimeout: '30',
     twoFactorAuth: false,
     automaticLockout: true,
     auditLogging: true,
-    
     // Camera Settings
     videoQuality: 'high',
     recordingEnabled: true,
     motionDetection: true,
     nightVision: true,
-    
     // System
     autoBackup: true,
     dataRetention: '90',
     systemUpdates: true,
     performanceMode: 'balanced'
   });
-
   const handleSave = async () => {
     setLoading(true);
     try {
@@ -59,7 +55,6 @@ export const Settings = () => {
       setLoading(false);
     }
   };
-
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -68,9 +63,7 @@ export const Settings = () => {
       toast.error('Failed to sign out');
     }
   };
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border p-4 md:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -122,25 +115,24 @@ export const Settings = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="systemName">System Name</Label>
-                  <Input
-                    id="systemName"
-                    value={settings.systemName}
-                    onChange={(e) => setSettings(prev => ({ ...prev, systemName: e.target.value }))}
-                  />
+                  <Input id="systemName" value={settings.systemName} onChange={e => setSettings(prev => ({
+                  ...prev,
+                  systemName: e.target.value
+                }))} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    value={settings.location}
-                    onChange={(e) => setSettings(prev => ({ ...prev, location: e.target.value }))}
-                  />
+                  <Input id="location" value={settings.location} onChange={e => setSettings(prev => ({
+                  ...prev,
+                  location: e.target.value
+                }))} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="timezone">Timezone</Label>
-                  <Select value={settings.timezone} onValueChange={(value) => 
-                    setSettings(prev => ({ ...prev, timezone: value }))
-                  }>
+                  <Select value={settings.timezone} onValueChange={value => setSettings(prev => ({
+                  ...prev,
+                  timezone: value
+                }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -153,9 +145,10 @@ export const Settings = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="language">Language</Label>
-                  <Select value={settings.language} onValueChange={(value) => 
-                    setSettings(prev => ({ ...prev, language: value }))
-                  }>
+                  <Select value={settings.language} onValueChange={value => setSettings(prev => ({
+                  ...prev,
+                  language: value
+                }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -200,43 +193,40 @@ export const Settings = () => {
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <Label>Email Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Receive alerts via email</p>
+                    
+                    
                   </div>
-                  <Switch
-                    checked={settings.emailNotifications}
-                    onCheckedChange={(value) => setSettings(prev => ({ ...prev, emailNotifications: value }))}
-                  />
+                  
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <Label>SMS Notifications</Label>
                     <p className="text-sm text-muted-foreground">Receive critical alerts via SMS</p>
                   </div>
-                  <Switch
-                    checked={settings.smsNotifications}
-                    onCheckedChange={(value) => setSettings(prev => ({ ...prev, smsNotifications: value }))}
-                  />
+                  <Switch checked={settings.smsNotifications} onCheckedChange={value => setSettings(prev => ({
+                  ...prev,
+                  smsNotifications: value
+                }))} />
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <Label>Push Notifications</Label>
                     <p className="text-sm text-muted-foreground">Browser push notifications</p>
                   </div>
-                  <Switch
-                    checked={settings.pushNotifications}
-                    onCheckedChange={(value) => setSettings(prev => ({ ...prev, pushNotifications: value }))}
-                  />
+                  <Switch checked={settings.pushNotifications} onCheckedChange={value => setSettings(prev => ({
+                  ...prev,
+                  pushNotifications: value
+                }))} />
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <Label>Alert Sounds</Label>
                     <p className="text-sm text-muted-foreground">Play audio alerts</p>
                   </div>
-                  <Switch
-                    checked={settings.alertSounds}
-                    onCheckedChange={(value) => setSettings(prev => ({ ...prev, alertSounds: value }))}
-                  />
+                  <Switch checked={settings.alertSounds} onCheckedChange={value => setSettings(prev => ({
+                  ...prev,
+                  alertSounds: value
+                }))} />
                 </div>
               </div>
             </Card>
@@ -249,9 +239,10 @@ export const Settings = () => {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
-                  <Select value={settings.sessionTimeout} onValueChange={(value) => 
-                    setSettings(prev => ({ ...prev, sessionTimeout: value }))
-                  }>
+                  <Select value={settings.sessionTimeout} onValueChange={value => setSettings(prev => ({
+                  ...prev,
+                  sessionTimeout: value
+                }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -268,20 +259,20 @@ export const Settings = () => {
                     <Label>Two-Factor Authentication</Label>
                     <p className="text-sm text-muted-foreground">Add extra security to your account</p>
                   </div>
-                  <Switch
-                    checked={settings.twoFactorAuth}
-                    onCheckedChange={(value) => setSettings(prev => ({ ...prev, twoFactorAuth: value }))}
-                  />
+                  <Switch checked={settings.twoFactorAuth} onCheckedChange={value => setSettings(prev => ({
+                  ...prev,
+                  twoFactorAuth: value
+                }))} />
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <Label>Automatic Lockout</Label>
                     <p className="text-sm text-muted-foreground">Lock system after failed attempts</p>
                   </div>
-                  <Switch
-                    checked={settings.automaticLockout}
-                    onCheckedChange={(value) => setSettings(prev => ({ ...prev, automaticLockout: value }))}
-                  />
+                  <Switch checked={settings.automaticLockout} onCheckedChange={value => setSettings(prev => ({
+                  ...prev,
+                  automaticLockout: value
+                }))} />
                 </div>
               </div>
             </Card>
@@ -294,9 +285,10 @@ export const Settings = () => {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="videoQuality">Video Quality</Label>
-                  <Select value={settings.videoQuality} onValueChange={(value) => 
-                    setSettings(prev => ({ ...prev, videoQuality: value }))
-                  }>
+                  <Select value={settings.videoQuality} onValueChange={value => setSettings(prev => ({
+                  ...prev,
+                  videoQuality: value
+                }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -312,20 +304,20 @@ export const Settings = () => {
                     <Label>Recording Enabled</Label>
                     <p className="text-sm text-muted-foreground">Save video recordings</p>
                   </div>
-                  <Switch
-                    checked={settings.recordingEnabled}
-                    onCheckedChange={(value) => setSettings(prev => ({ ...prev, recordingEnabled: value }))}
-                  />
+                  <Switch checked={settings.recordingEnabled} onCheckedChange={value => setSettings(prev => ({
+                  ...prev,
+                  recordingEnabled: value
+                }))} />
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <Label>Motion Detection</Label>
                     <p className="text-sm text-muted-foreground">Detect movement in camera feeds</p>
                   </div>
-                  <Switch
-                    checked={settings.motionDetection}
-                    onCheckedChange={(value) => setSettings(prev => ({ ...prev, motionDetection: value }))}
-                  />
+                  <Switch checked={settings.motionDetection} onCheckedChange={value => setSettings(prev => ({
+                  ...prev,
+                  motionDetection: value
+                }))} />
                 </div>
               </div>
             </Card>
@@ -338,9 +330,10 @@ export const Settings = () => {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="dataRetention">Data Retention (days)</Label>
-                  <Select value={settings.dataRetention} onValueChange={(value) => 
-                    setSettings(prev => ({ ...prev, dataRetention: value }))
-                  }>
+                  <Select value={settings.dataRetention} onValueChange={value => setSettings(prev => ({
+                  ...prev,
+                  dataRetention: value
+                }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -357,26 +350,25 @@ export const Settings = () => {
                     <Label>Automatic Backup</Label>
                     <p className="text-sm text-muted-foreground">Daily system backups</p>
                   </div>
-                  <Switch
-                    checked={settings.autoBackup}
-                    onCheckedChange={(value) => setSettings(prev => ({ ...prev, autoBackup: value }))}
-                  />
+                  <Switch checked={settings.autoBackup} onCheckedChange={value => setSettings(prev => ({
+                  ...prev,
+                  autoBackup: value
+                }))} />
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <Label>System Updates</Label>
                     <p className="text-sm text-muted-foreground">Automatic updates</p>
                   </div>
-                  <Switch
-                    checked={settings.systemUpdates}
-                    onCheckedChange={(value) => setSettings(prev => ({ ...prev, systemUpdates: value }))}
-                  />
+                  <Switch checked={settings.systemUpdates} onCheckedChange={value => setSettings(prev => ({
+                  ...prev,
+                  systemUpdates: value
+                }))} />
                 </div>
               </div>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
-    </div>
-  );
+    </div>;
 };
