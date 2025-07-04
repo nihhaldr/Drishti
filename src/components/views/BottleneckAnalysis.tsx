@@ -328,10 +328,7 @@ export const BottleneckAnalysis = () => {
                     return null;
                   }}
                 />
-                <Scatter 
-                  dataKey="throughput" 
-                  fill={(entry) => COLORS[entry.severity] || '#8884d8'}
-                />
+                <Scatter dataKey="throughput" fill="#8884d8" />
               </ScatterChart>
             </ResponsiveContainer>
           </Card>
