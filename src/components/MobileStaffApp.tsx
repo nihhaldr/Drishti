@@ -132,7 +132,7 @@ export const MobileStaffApp = () => {
             <Input value={deploymentLocation} onChange={e => setDeploymentLocation(e.target.value)} placeholder="Enter location for team deployment" className="border-red-300 focus:border-red-500" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Button onClick={() => handleDeployTeam('Security Team')} className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2" disabled={!deploymentLocation}>
+            <Button onClick={() => handleDeployTeam('Security Team')} disabled={!deploymentLocation} className="text-white flex items-center gap-2 bg-google-red">
               <Shield className="w-4 h-4" />
               Deploy Security
             </Button>
