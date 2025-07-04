@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Search, Bell, User } from 'lucide-react';
+import { Search, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { alertService } from '@/services/alertService';
@@ -33,7 +33,7 @@ export const TopBar = ({ onToggleAlerts }: { onToggleAlerts?: () => void }) => {
     fetchAlertCount();
 
     // Set up interval to refresh alert count
-    const interval = setInterval(fetchAlertCount, 30000); // Refresh every 30 seconds
+    const interval = setInterval(fetchAlertCount, 30000);
 
     return () => clearInterval(interval);
   }, []);
@@ -56,7 +56,6 @@ export const TopBar = ({ onToggleAlerts }: { onToggleAlerts?: () => void }) => {
           const { latitude, longitude } = position.coords;
           
           try {
-            // Try to get location name using reverse geocoding
             const response = await fetch(
               `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
             );
@@ -101,17 +100,14 @@ export const TopBar = ({ onToggleAlerts }: { onToggleAlerts?: () => void }) => {
   }, []);
 
   const playEmergencySound = () => {
-    // Create an audio context for the siren sound
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     
-    // Create a simple siren sound effect
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
     
     oscillator.connect(gainNode);
     gainNode.connect(audioContext.destination);
     
-    // Configure the siren sound
     oscillator.type = 'sine';
     oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
     oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.5);
@@ -126,10 +122,8 @@ export const TopBar = ({ onToggleAlerts }: { onToggleAlerts?: () => void }) => {
 
   const handleEmergencyAlert = async () => {
     try {
-      // Play siren sound
       playEmergencySound();
       
-      // Create emergency alert with current location
       await alertService.create({
         title: 'Emergency Alert Activated',
         message: `Emergency alert has been triggered from ${currentLocation?.name || 'Command Center'}`,
@@ -139,7 +133,6 @@ export const TopBar = ({ onToggleAlerts }: { onToggleAlerts?: () => void }) => {
         location_name: currentLocation?.name || 'Command Center'
       });
       
-      // Refresh alert count
       const alerts = await alertService.getActive();
       setAlertCount(alerts.length);
       
@@ -150,18 +143,42 @@ export const TopBar = ({ onToggleAlerts }: { onToggleAlerts?: () => void }) => {
     }
   };
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (query.trim()) {
+      console.log('Searching for:', query);
+      // Add search analytics
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'search', {
+          search_term: query,
+          event_category: 'Drishti Search',
+          event_label: 'AI Command Search'
+        });
+      }
+      
+      // Display search results (this would typically integrate with your AI system)
+      toast.info(`Searching for: "${query}"`);
+      
+      // Here you would typically call your AI search service
+      // searchService.query(query);
+    }
+  };
+
   return (
     <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm">
       {/* Search */}
-      <div className="flex-1 max-w-2xl relative">
+      <form onSubmit={handleSearch} className="flex-1 max-w-2xl relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Ask Drishti AI anything... (e.g., 'Show me crowd density at Gate 3')"
           className="pl-10 bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:border-google-blue focus:ring-google-blue/20"
+          title="Search Drishti AI - Event Security Intelligence"
+          aria-label="Search Drishti AI for security insights and commands"
         />
-      </div>
+        <button type="submit" className="sr-only">Search</button>
+      </form>
 
       {/* Right side actions */}
       <div className="flex items-center gap-4">
@@ -191,11 +208,6 @@ export const TopBar = ({ onToggleAlerts }: { onToggleAlerts?: () => void }) => {
             </div>
           )}
         </div>
-
-        {/* User Profile */}
-        <Button variant="ghost" size="icon" className="text-gray-600 hover:text-google-blue hover:bg-gray-50">
-          <User size={20} />
-        </Button>
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/ui/card';
@@ -43,11 +42,11 @@ export const AuthPage = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="p-3 bg-white rounded-full shadow-lg">
+            <div className="w-24 h-24 bg-white rounded-full shadow-lg border-4 border-primary/20 flex items-center justify-center">
               <img 
                 src="/lovable-uploads/0d791fe6-9d40-4b59-a4dd-4b21c267d2fe.png" 
                 alt="Drishti Logo" 
-                className="w-16 h-16 object-contain"
+                className="w-16 h-16 object-contain rounded-full"
               />
             </div>
           </div>
