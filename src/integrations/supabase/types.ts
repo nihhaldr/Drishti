@@ -88,56 +88,6 @@ export type Database = {
           },
         ]
       }
-      camera_feeds: {
-        Row: {
-          ai_analysis_enabled: boolean | null
-          created_at: string | null
-          event_id: string | null
-          id: string
-          is_active: boolean | null
-          latitude: number | null
-          location_name: string
-          longitude: number | null
-          name: string
-          stream_url: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          ai_analysis_enabled?: boolean | null
-          created_at?: string | null
-          event_id?: string | null
-          id?: string
-          is_active?: boolean | null
-          latitude?: number | null
-          location_name: string
-          longitude?: number | null
-          name: string
-          stream_url?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          ai_analysis_enabled?: boolean | null
-          created_at?: string | null
-          event_id?: string | null
-          id?: string
-          is_active?: boolean | null
-          latitude?: number | null
-          location_name?: string
-          longitude?: number | null
-          name?: string
-          stream_url?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "camera_feeds_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       crowd_metrics: {
         Row: {
           density_count: number

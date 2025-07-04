@@ -50,21 +50,22 @@ export const CameraCard = ({
   };
 
   const renderVideoPlayer = () => {
-    if (feed.isWebRTC) {
+    // Use LocalVideoPlayer for imported video files
+    if (feed.isLocalFile && feed.videoUrl) {
+      return (
+        <LocalVideoPlayer
+          feed={feed}
+          onStatusChange={onStatusChange}
+          onFullscreen={() => onFullscreen(feed)}
+        />
+      );
+    } else if (feed.isWebRTC) {
       return (
         <WebRTCPlayer
           serverUrl={webrtcServerUrl}
           streamId={feed.streamId}
           onPlayStarted={(id) => onStatusChange(feed.id, 'live')}
           onPlayStopped={(id) => onStatusChange(feed.id, 'offline')}
-          onFullscreen={() => onFullscreen(feed)}
-        />
-      );
-    } else if (feed.isLocalFile && feed.videoUrl) {
-      return (
-        <LocalVideoPlayer
-          feed={feed}
-          onStatusChange={onStatusChange}
           onFullscreen={() => onFullscreen(feed)}
         />
       );

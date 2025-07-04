@@ -19,19 +19,23 @@ export const VideoPlayer = ({
 }: VideoPlayerProps) => {
   const [hasError, setHasError] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // For imported videos, set status to live immediately
     if (feed.videoUrl || feed.streamUrl) {
+      setIsLoading(false);
       onStatusChange(feed.id, 'live');
       setIsPlaying(true);
     } else {
+      setIsLoading(false);
       onStatusChange(feed.id, 'offline');
     }
   }, [feed.videoUrl, feed.streamUrl, feed.id, onStatusChange]);
 
   const handleVideoError = () => {
     setHasError(true);
+    setIsLoading(false);
     onStatusChange(feed.id, 'error');
   };
 
@@ -44,6 +48,22 @@ export const VideoPlayer = ({
     setIsPlaying(false);
     onStatusChange(feed.id, 'offline');
   };
+
+  const handleVideoLoadedData = () => {
+    setIsLoading(false);
+    onStatusChange(feed.id, 'live');
+  };
+
+  if (isLoading) {
+    return (
+      <div className="absolute inset-0 bg-black flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="animate-spin w-8 h-8 border-2 border-white border-t-transparent rounded-full mx-auto mb-2"></div>
+          <p className="text-sm">Loading video...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (hasError) {
     return (
@@ -70,6 +90,7 @@ export const VideoPlayer = ({
           onError={handleVideoError}
           onPlay={handleVideoPlay}
           onPause={handleVideoPause}
+          onLoadedData={handleVideoLoadedData}
         />
         
         {/* Overlay for fullscreen button */}
@@ -100,6 +121,10 @@ export const VideoPlayer = ({
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
           onError={handleVideoError}
+          onLoad={() => {
+            setIsLoading(false);
+            onStatusChange(feed.id, 'live');
+          }}
         />
         
         {/* Overlay for fullscreen button */}
