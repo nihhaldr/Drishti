@@ -358,7 +358,7 @@ export const LostAndFound = () => {
                     </div>
                   </div>
 
-                  <Button onClick={handleFindPerson} disabled={!lostPersonPhoto || !crowdFootage} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-lg">
+                  <Button onClick={handleFindPerson} disabled={!lostPersonPhoto || !crowdFootage} className="w-full text-white font-semibold py-3 rounded-lg bg-blue-600 hover:bg-blue-500">
                     Find Person
                   </Button>
                 </div>
