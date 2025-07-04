@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { WhatsAppService } from '@/services/whatsappService';
 import { toast } from 'sonner';
-
 interface StaffMember {
   id: string;
   name: string;
@@ -18,14 +16,30 @@ interface StaffMember {
   lastUpdate: string;
   role: string;
 }
-
 export const MobileStaffApp = () => {
   const [qrCode, setQrCode] = useState('');
-  const [connectedStaff, setConnectedStaff] = useState<StaffMember[]>([
-    { id: '1', name: 'Security Team Alpha', location: 'Main Gate', status: 'Active', lastUpdate: '2 min ago', role: 'Security' },
-    { id: '2', name: 'Medical Unit 1', location: 'Food Court', status: 'Standby', lastUpdate: '5 min ago', role: 'Medical' },
-    { id: '3', name: 'Safety Officer Mike', location: 'VIP Area', status: 'Active', lastUpdate: '1 min ago', role: 'Safety' },
-  ]);
+  const [connectedStaff, setConnectedStaff] = useState<StaffMember[]>([{
+    id: '1',
+    name: 'Security Team Alpha',
+    location: 'Main Gate',
+    status: 'Active',
+    lastUpdate: '2 min ago',
+    role: 'Security'
+  }, {
+    id: '2',
+    name: 'Medical Unit 1',
+    location: 'Food Court',
+    status: 'Standby',
+    lastUpdate: '5 min ago',
+    role: 'Medical'
+  }, {
+    id: '3',
+    name: 'Safety Officer Mike',
+    location: 'VIP Area',
+    status: 'Active',
+    lastUpdate: '1 min ago',
+    role: 'Safety'
+  }]);
   const [isAddingStaff, setIsAddingStaff] = useState(false);
   const [newStaff, setNewStaff] = useState({
     name: '',
@@ -34,7 +48,6 @@ export const MobileStaffApp = () => {
     role: ''
   });
   const [deploymentLocation, setDeploymentLocation] = useState('');
-
   const whatsappService = WhatsAppService.getInstance();
   const targetPhoneNumber = '10225511'; // 9110225511 without country code
 
@@ -42,7 +55,6 @@ export const MobileStaffApp = () => {
     // Generate QR code URL for mobile app download
     setQrCode('https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=https://safety-command-mobile.app');
   }, []);
-
   const handleAddStaff = () => {
     if (newStaff.name && newStaff.location && newStaff.role) {
       const staff: StaffMember = {
@@ -54,38 +66,37 @@ export const MobileStaffApp = () => {
         role: newStaff.role
       };
       setConnectedStaff([...connectedStaff, staff]);
-      setNewStaff({ name: '', location: '', status: 'Active', role: '' });
+      setNewStaff({
+        name: '',
+        location: '',
+        status: 'Active',
+        role: ''
+      });
       setIsAddingStaff(false);
     }
   };
-
   const handleRemoveStaff = (id: string) => {
     setConnectedStaff(connectedStaff.filter(staff => staff.id !== id));
   };
-
   const handleStatusChange = (id: string, newStatus: 'Active' | 'Standby' | 'Offline') => {
-    setConnectedStaff(connectedStaff.map(staff => 
-      staff.id === id 
-        ? { ...staff, status: newStatus, lastUpdate: 'Just now' }
-        : staff
-    ));
+    setConnectedStaff(connectedStaff.map(staff => staff.id === id ? {
+      ...staff,
+      status: newStatus,
+      lastUpdate: 'Just now'
+    } : staff));
   };
-
   const handleDeployTeam = async (teamType: string) => {
     if (!deploymentLocation) {
       toast.error('Please enter deployment location');
       return;
     }
-
     const message = whatsappService.generateDeploymentMessage(teamType, deploymentLocation);
-    
     try {
       const success = await whatsappService.sendMessage({
         to: targetPhoneNumber,
         message,
         type: 'deployment'
       });
-
       if (success) {
         toast.success(`${teamType} deployment request sent via WhatsApp`);
         setDeploymentLocation('');
@@ -97,9 +108,7 @@ export const MobileStaffApp = () => {
       toast.error('Failed to send deployment request');
     }
   };
-
-  return (
-    <div className="p-6 space-y-6 bg-white min-h-screen">
+  return <div className="p-6 space-y-6 bg-white min-h-screen">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Mobile Staff Integration</h1>
@@ -120,35 +129,18 @@ export const MobileStaffApp = () => {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-red-800 mb-2">Deployment Location</label>
-            <Input
-              value={deploymentLocation}
-              onChange={(e) => setDeploymentLocation(e.target.value)}
-              placeholder="Enter location for team deployment"
-              className="border-red-300 focus:border-red-500"
-            />
+            <Input value={deploymentLocation} onChange={e => setDeploymentLocation(e.target.value)} placeholder="Enter location for team deployment" className="border-red-300 focus:border-red-500" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Button
-              onClick={() => handleDeployTeam('Security Team')}
-              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-              disabled={!deploymentLocation}
-            >
+            <Button onClick={() => handleDeployTeam('Security Team')} className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2" disabled={!deploymentLocation}>
               <Shield className="w-4 h-4" />
               Deploy Security
             </Button>
-            <Button
-              onClick={() => handleDeployTeam('Medical Team')}
-              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
-              disabled={!deploymentLocation}
-            >
+            <Button onClick={() => handleDeployTeam('Medical Team')} className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2" disabled={!deploymentLocation}>
               <Heart className="w-4 h-4" />
               Deploy Medical
             </Button>
-            <Button
-              onClick={() => handleDeployTeam('Drone Unit')}
-              className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
-              disabled={!deploymentLocation}
-            >
+            <Button onClick={() => handleDeployTeam('Drone Unit')} disabled={!deploymentLocation} className="text-white flex items-center gap-2 bg-google-blue">
               <Plane className="w-4 h-4" />
               Deploy Drone
             </Button>
@@ -220,22 +212,22 @@ export const MobileStaffApp = () => {
                 <DialogTitle>Add New Staff Member</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <Input
-                  placeholder="Staff Name"
-                  value={newStaff.name}
-                  onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
-                />
-                <Input
-                  placeholder="Location"
-                  value={newStaff.location}
-                  onChange={(e) => setNewStaff({ ...newStaff, location: e.target.value })}
-                />
-                <Input
-                  placeholder="Role (e.g., Security, Medical, Safety)"
-                  value={newStaff.role}
-                  onChange={(e) => setNewStaff({ ...newStaff, role: e.target.value })}
-                />
-                <Select value={newStaff.status} onValueChange={(value: 'Active' | 'Standby' | 'Offline') => setNewStaff({ ...newStaff, status: value })}>
+                <Input placeholder="Staff Name" value={newStaff.name} onChange={e => setNewStaff({
+                ...newStaff,
+                name: e.target.value
+              })} />
+                <Input placeholder="Location" value={newStaff.location} onChange={e => setNewStaff({
+                ...newStaff,
+                location: e.target.value
+              })} />
+                <Input placeholder="Role (e.g., Security, Medical, Safety)" value={newStaff.role} onChange={e => setNewStaff({
+                ...newStaff,
+                role: e.target.value
+              })} />
+                <Select value={newStaff.status} onValueChange={(value: 'Active' | 'Standby' | 'Offline') => setNewStaff({
+                ...newStaff,
+                status: value
+              })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select Status" />
                   </SelectTrigger>
@@ -255,14 +247,8 @@ export const MobileStaffApp = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {connectedStaff.map((staff) => (
-            <div key={staff.id} className="p-4 bg-gray-50 rounded-lg relative">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleRemoveStaff(staff.id)}
-                className="absolute top-2 right-2 h-6 w-6 p-0 text-red-500 hover:text-red-700"
-              >
+          {connectedStaff.map(staff => <div key={staff.id} className="p-4 bg-gray-50 rounded-lg relative">
+              <Button variant="ghost" size="sm" onClick={() => handleRemoveStaff(staff.id)} className="absolute top-2 right-2 h-6 w-6 p-0 text-red-500 hover:text-red-700">
                 <X className="w-4 h-4" />
               </Button>
               
@@ -294,10 +280,8 @@ export const MobileStaffApp = () => {
                   Updated {staff.lastUpdate}
                 </p>
               </div>
-            </div>
-          ))}
+            </div>)}
         </div>
       </Card>
-    </div>
-  );
+    </div>;
 };
