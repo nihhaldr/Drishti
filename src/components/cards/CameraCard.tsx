@@ -8,6 +8,7 @@ import { VideoPlayer } from '@/components/VideoPlayer';
 import { WebRTCPlayer } from '@/components/WebRTCPlayer';
 import { LocalVideoPlayer } from '@/components/LocalVideoPlayer';
 import { StreamPlayer } from '@/components/StreamPlayer';
+import { IframeVideoPlayer } from '@/components/IframeVideoPlayer';
 
 interface CameraCardProps {
   feed: CameraFeed;
@@ -70,6 +71,15 @@ export const CameraCard = ({
     } else if (feed.streamUrl && (feed.streamUrl.includes('youtube.com') || feed.streamUrl.includes('twitch.tv'))) {
       return (
         <StreamPlayer
+          feed={feed}
+          onStatusChange={onStatusChange}
+          onFullscreen={() => onFullscreen(feed)}
+        />
+      );
+    } else if (feed.streamUrl) {
+      // Use iframe player for general stream URLs
+      return (
+        <IframeVideoPlayer
           feed={feed}
           onStatusChange={onStatusChange}
           onFullscreen={() => onFullscreen(feed)}

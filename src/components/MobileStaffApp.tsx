@@ -4,9 +4,11 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { QrCode, Smartphone, AlertTriangle, Bell, Camera, MapPin, Plus, X, User, Clock } from 'lucide-react';
+import { QrCode, Smartphone, AlertTriangle, Bell, Camera, MapPin, Plus, X, User, Clock, Shield, Heart, Plane } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { WhatsAppService } from '@/services/whatsappService';
+import { toast } from 'sonner';
 
 interface StaffMember {
   id: string;
@@ -31,6 +33,10 @@ export const MobileStaffApp = () => {
     status: 'Active' as 'Active' | 'Standby' | 'Offline',
     role: ''
   });
+  const [deploymentLocation, setDeploymentLocation] = useState('');
+
+  const whatsappService = WhatsAppService.getInstance();
+  const targetPhoneNumber = '10225511'; // 9110225511 without country code
 
   useEffect(() => {
     // Generate QR code URL for mobile app download
@@ -65,6 +71,33 @@ export const MobileStaffApp = () => {
     ));
   };
 
+  const handleDeployTeam = async (teamType: string) => {
+    if (!deploymentLocation) {
+      toast.error('Please enter deployment location');
+      return;
+    }
+
+    const message = whatsappService.generateDeploymentMessage(teamType, deploymentLocation);
+    
+    try {
+      const success = await whatsappService.sendMessage({
+        to: targetPhoneNumber,
+        message,
+        type: 'deployment'
+      });
+
+      if (success) {
+        toast.success(`${teamType} deployment request sent via WhatsApp`);
+        setDeploymentLocation('');
+      } else {
+        toast.error('Failed to send deployment request');
+      }
+    } catch (error) {
+      console.error('Deployment error:', error);
+      toast.error('Failed to send deployment request');
+    }
+  };
+
   return (
     <div className="p-6 space-y-6 bg-white min-h-screen">
       <div className="flex items-center justify-between">
@@ -77,6 +110,54 @@ export const MobileStaffApp = () => {
           {connectedStaff.length} Staff Connected
         </Badge>
       </div>
+
+      {/* Emergency Deployment Section */}
+      <Card className="bg-red-50 border-red-200 p-6">
+        <h3 className="text-lg font-semibold text-red-900 mb-4 flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5" />
+          Emergency Team Deployment
+        </h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-red-800 mb-2">Deployment Location</label>
+            <Input
+              value={deploymentLocation}
+              onChange={(e) => setDeploymentLocation(e.target.value)}
+              placeholder="Enter location for team deployment"
+              className="border-red-300 focus:border-red-500"
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Button
+              onClick={() => handleDeployTeam('Security Team')}
+              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+              disabled={!deploymentLocation}
+            >
+              <Shield className="w-4 h-4" />
+              Deploy Security
+            </Button>
+            <Button
+              onClick={() => handleDeployTeam('Medical Team')}
+              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+              disabled={!deploymentLocation}
+            >
+              <Heart className="w-4 h-4" />
+              Deploy Medical
+            </Button>
+            <Button
+              onClick={() => handleDeployTeam('Drone Unit')}
+              className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
+              disabled={!deploymentLocation}
+            >
+              <Plane className="w-4 h-4" />
+              Deploy Drone
+            </Button>
+          </div>
+          <div className="text-xs text-red-600 bg-red-100 p-2 rounded">
+            <strong>Note:</strong> Deployment requests will be sent to WhatsApp number: +91 10225511
+          </div>
+        </div>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* QR Code for App Download */}

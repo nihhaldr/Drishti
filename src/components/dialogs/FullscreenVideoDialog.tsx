@@ -6,6 +6,7 @@ import { VideoPlayer } from '@/components/VideoPlayer';
 import { WebRTCPlayer } from '@/components/WebRTCPlayer';
 import { LocalVideoPlayer } from '@/components/LocalVideoPlayer';
 import { StreamPlayer } from '@/components/StreamPlayer';
+import { IframeVideoPlayer } from '@/components/IframeVideoPlayer';
 
 interface FullscreenVideoDialogProps {
   selectedFeed: CameraFeed | null;
@@ -44,6 +45,15 @@ export const FullscreenVideoDialog = ({
     } else if (selectedFeed.streamUrl && (selectedFeed.streamUrl.includes('youtube.com') || selectedFeed.streamUrl.includes('twitch.tv'))) {
       return (
         <StreamPlayer
+          feed={selectedFeed}
+          isFullView={true}
+          onStatusChange={onStatusChange}
+        />
+      );
+    } else if (selectedFeed.streamUrl) {
+      // Use iframe player for general stream URLs
+      return (
+        <IframeVideoPlayer
           feed={selectedFeed}
           isFullView={true}
           onStatusChange={onStatusChange}
