@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, Clock, Users, MapPin, Bell, Navigation } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -215,7 +214,7 @@ export const AlertPanel = () => {
                     <h3 className="text-sm font-medium text-gray-800 truncate">
                       {alert.title}
                     </h3>
-                    <Badge className={getSeverityColor(alert.severity)} size="sm">
+                    <Badge className={getSeverityColor(alert.severity)}>
                       {alert.severity.toUpperCase()}
                     </Badge>
                   </div>
