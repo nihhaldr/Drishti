@@ -145,9 +145,7 @@ export const MobileStaffApp = () => {
               Deploy Drone
             </Button>
           </div>
-          <div className="text-xs text-red-600 bg-red-100 p-2 rounded">
-            <strong>Note:</strong> Deployment requests will be sent to WhatsApp number: +91 10225511
-          </div>
+          
         </div>
       </Card>
 
