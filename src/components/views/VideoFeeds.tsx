@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +11,7 @@ import { EditCameraDialog } from '@/components/dialogs/EditCameraDialog';
 import { CameraCard } from '@/components/cards/CameraCard';
 import { FullscreenVideoDialog } from '@/components/dialogs/FullscreenVideoDialog';
 import { EmptyState } from '@/components/states/EmptyState';
+import { ImportVideoDialog } from '@/components/dialogs/ImportVideoDialog';
 
 interface NewFeedForm {
   name: string;
@@ -65,6 +65,53 @@ export const VideoFeeds = () => {
 
   const handleFullscreen = (feed: CameraFeed) => {
     setSelectedFeed(feed);
+  };
+
+  const handleImportFile = (file: File, name: string, location: string) => {
+    const videoUrl = URL.createObjectURL(file);
+    const feed: CameraFeed = {
+      id: Date.now(),
+      name,
+      location,
+      videoFile: file,
+      videoUrl,
+      isLocalFile: true,
+      fileSize: file.size,
+      uploadedAt: new Date().toISOString(),
+      status: 'offline',
+      viewers: 0,
+      alerts: 0
+    };
+    setFeeds(prev => [...prev, feed]);
+    toast.success('Video file imported successfully');
+  };
+
+  const handleImportStream = (url: string, name: string, location: string) => {
+    const feed: CameraFeed = {
+      id: Date.now(),
+      name,
+      location,
+      streamUrl: url,
+      status: 'offline',
+      viewers: 0,
+      alerts: 0
+    };
+    setFeeds(prev => [...prev, feed]);
+    toast.success('Stream URL added successfully');
+  };
+
+  const handleDownload = (feed: CameraFeed) => {
+    if (feed.videoFile) {
+      const url = URL.createObjectURL(feed.videoFile);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = feed.videoFile.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Download started');
+    }
   };
 
   const handleAddFeed = () => {
@@ -137,9 +184,14 @@ export const VideoFeeds = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-foreground">Video Surveillance</h1>
-          <p className="text-sm text-muted-foreground">Live camera feeds and WebRTC streaming</p>
+          <p className="text-sm text-muted-foreground">Live camera feeds, file uploads, and streaming</p>
         </div>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <ImportVideoDialog
+            onImportFile={handleImportFile}
+            onImportStream={handleImportStream}
+          />
+
           <AddCameraDialog
             isOpen={isAddDialogOpen}
             onOpenChange={setIsAddDialogOpen}
@@ -251,6 +303,7 @@ export const VideoFeeds = () => {
               onFullscreen={handleFullscreen}
               onEdit={handleEditFeed}
               onDelete={handleDeleteFeed}
+              onDownload={handleDownload}
             />
           ))}
         </div>
