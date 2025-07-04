@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 
 export const AuthPage = () => {
   const { signIn, signUp } = useAuth();
@@ -43,8 +43,12 @@ export const AuthPage = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="p-3 bg-primary rounded-full">
-              <Shield className="w-8 h-8 text-primary-foreground" />
+            <div className="p-3 bg-white rounded-full shadow-lg">
+              <img 
+                src="/lovable-uploads/0d791fe6-9d40-4b59-a4dd-4b21c267d2fe.png" 
+                alt="Drishti Logo" 
+                className="w-16 h-16 object-contain"
+              />
             </div>
           </div>
           <h1 className="text-3xl font-bold text-foreground mb-2">Project Drishti</h1>

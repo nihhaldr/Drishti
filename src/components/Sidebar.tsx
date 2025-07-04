@@ -44,8 +44,12 @@ export const Sidebar = ({ selectedView, setSelectedView, collapsed, setCollapsed
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-google-blue to-google-red rounded-lg flex items-center justify-center shadow-md">
-            <span className="text-white font-bold text-lg">D</span>
+          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-md border">
+            <img 
+              src="/lovable-uploads/0d791fe6-9d40-4b59-a4dd-4b21c267d2fe.png" 
+              alt="Drishti Logo" 
+              className="w-8 h-8 object-contain"
+            />
           </div>
           {!collapsed && (
             <div>
