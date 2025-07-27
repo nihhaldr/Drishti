@@ -19,24 +19,38 @@ export const VideoFeedsAnalysis = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   useEffect(() => {
     // Load saved video feeds from localStorage
-    const savedFeeds = localStorage.getItem('cameraFeeds');
-    if (savedFeeds) {
-      try {
-        const parsedFeeds = JSON.parse(savedFeeds);
-        setVideoFeeds(parsedFeeds);
-        // Initialize analysis data for existing feeds
-        const initialAnalysis = parsedFeeds.map((feed: CameraFeed) => ({
-          feedId: feed.id,
-          crowdCount: Math.floor(Math.random() * 500) + 50,
-          density: Math.floor(Math.random() * 100),
-          riskLevel: ['low', 'medium', 'high', 'critical'][Math.floor(Math.random() * 4)] as VideoAnalysisData['riskLevel'],
-          lastAnalyzed: new Date()
-        }));
-        setAnalysisData(initialAnalysis);
-      } catch (error) {
-        console.error('Error loading video feeds:', error);
+    const loadFeeds = () => {
+      const savedFeeds = localStorage.getItem('cameraFeeds');
+      if (savedFeeds) {
+        try {
+          const parsedFeeds = JSON.parse(savedFeeds);
+          setVideoFeeds(parsedFeeds);
+          // Initialize analysis data for existing feeds
+          const initialAnalysis = parsedFeeds.map((feed: CameraFeed) => ({
+            feedId: feed.id,
+            crowdCount: Math.floor(Math.random() * 500) + 50,
+            density: Math.floor(Math.random() * 100),
+            riskLevel: ['low', 'medium', 'high', 'critical'][Math.floor(Math.random() * 4)] as VideoAnalysisData['riskLevel'],
+            lastAnalyzed: new Date()
+          }));
+          setAnalysisData(initialAnalysis);
+        } catch (error) {
+          console.error('Error loading video feeds:', error);
+        }
       }
-    }
+    };
+
+    loadFeeds();
+
+    // Listen for storage changes to sync with Video Feeds page
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'cameraFeeds') {
+        loadFeeds();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
   const handleImportFile = (file: File, name: string, location: string) => {
     const videoUrl = URL.createObjectURL(file);
