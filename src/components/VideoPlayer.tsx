@@ -22,12 +22,13 @@ export const VideoPlayer = ({
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // For imported videos, set status to live immediately
-    if (feed.videoUrl || feed.streamUrl) {
-      setIsLoading(false);
-      onStatusChange(feed.id, 'live');
-      setIsPlaying(true);
-    } else {
+    // Reset states when feed changes
+    setHasError(false);
+    setIsLoading(true);
+    setIsPlaying(false);
+    
+    // If no video source available, set to offline
+    if (!feed.videoUrl && !feed.streamUrl) {
       setIsLoading(false);
       onStatusChange(feed.id, 'offline');
     }
