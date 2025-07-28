@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Video, Users, AlertTriangle, Play, Pause, Grid, Maximize2 } from 'lucide-react';
+import { Video, Plus, Users, AlertTriangle, Play, Pause } from 'lucide-react';
 import { CameraFeed } from '@/types/cameraFeed';
-import { CameraCard } from '@/components/cards/CameraCard';
+import { VideoPlayer } from '@/components/VideoPlayer';
 import { ImportVideoDialog } from '@/components/dialogs/ImportVideoDialog';
-import { EditCameraDialog } from '@/components/dialogs/EditCameraDialog';
-import { FullscreenVideoDialog } from '@/components/dialogs/FullscreenVideoDialog';
 import { toast } from 'sonner';
 interface VideoAnalysisData {
   feedId: number;
@@ -19,52 +17,26 @@ export const VideoFeedsAnalysis = () => {
   const [videoFeeds, setVideoFeeds] = useState<CameraFeed[]>([]);
   const [analysisData, setAnalysisData] = useState<VideoAnalysisData[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'single'>('grid');
-  const [selectedFeed, setSelectedFeed] = useState<CameraFeed | null>(null);
-  const [editingFeed, setEditingFeed] = useState<CameraFeed | null>(null);
-  const [newFeed, setNewFeed] = useState({
-    name: '',
-    location: '',
-    streamUrl: '',
-    streamId: '',
-    isWebRTC: false
-  });
-
-  const webrtcServerUrl = 'wss://localhost:5443/WebRTCAppEE/websocket';
   useEffect(() => {
     // Load saved video feeds from localStorage
-    const loadFeeds = () => {
-      const savedFeeds = localStorage.getItem('cameraFeeds');
-      if (savedFeeds) {
-        try {
-          const parsedFeeds = JSON.parse(savedFeeds);
-          setVideoFeeds(parsedFeeds);
-          // Initialize analysis data for existing feeds
-          const initialAnalysis = parsedFeeds.map((feed: CameraFeed) => ({
-            feedId: feed.id,
-            crowdCount: Math.floor(Math.random() * 500) + 50,
-            density: Math.floor(Math.random() * 100),
-            riskLevel: ['low', 'medium', 'high', 'critical'][Math.floor(Math.random() * 4)] as VideoAnalysisData['riskLevel'],
-            lastAnalyzed: new Date()
-          }));
-          setAnalysisData(initialAnalysis);
-        } catch (error) {
-          console.error('Error loading video feeds:', error);
-        }
+    const savedFeeds = localStorage.getItem('cameraFeeds');
+    if (savedFeeds) {
+      try {
+        const parsedFeeds = JSON.parse(savedFeeds);
+        setVideoFeeds(parsedFeeds);
+        // Initialize analysis data for existing feeds
+        const initialAnalysis = parsedFeeds.map((feed: CameraFeed) => ({
+          feedId: feed.id,
+          crowdCount: Math.floor(Math.random() * 500) + 50,
+          density: Math.floor(Math.random() * 100),
+          riskLevel: ['low', 'medium', 'high', 'critical'][Math.floor(Math.random() * 4)] as VideoAnalysisData['riskLevel'],
+          lastAnalyzed: new Date()
+        }));
+        setAnalysisData(initialAnalysis);
+      } catch (error) {
+        console.error('Error loading video feeds:', error);
       }
-    };
-
-    loadFeeds();
-
-    // Listen for storage changes to sync with Video Feeds page
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'cameraFeeds') {
-        loadFeeds();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    }
   }, []);
   const handleImportFile = (file: File, name: string, location: string) => {
     const videoUrl = URL.createObjectURL(file);
@@ -125,88 +97,6 @@ export const VideoFeedsAnalysis = () => {
     setAnalysisData(prev => [...prev, newAnalysis]);
     toast.success(`Stream "${name}" added for analysis`);
   };
-
-  const handleEditFeed = (feed: CameraFeed) => {
-    setNewFeed({
-      name: feed.name,
-      location: feed.location,
-      streamUrl: feed.streamUrl || '',
-      streamId: feed.streamId || '',
-      isWebRTC: feed.isWebRTC || false
-    });
-    setEditingFeed(feed);
-  };
-
-  const handleUpdateFeed = () => {
-    if (!editingFeed) return;
-
-    if (!newFeed.name || !newFeed.location) {
-      toast.error('Please fill in camera name and location');
-      return;
-    }
-
-    const updatedFeeds = videoFeeds.map(feed => 
-      feed.id === editingFeed.id 
-        ? {
-            ...feed,
-            name: newFeed.name,
-            location: newFeed.location,
-            streamUrl: newFeed.isWebRTC ? undefined : newFeed.streamUrl,
-            streamId: newFeed.isWebRTC ? newFeed.streamId : undefined,
-            isWebRTC: newFeed.isWebRTC
-          }
-        : feed
-    );
-
-    setVideoFeeds(updatedFeeds);
-    localStorage.setItem('cameraFeeds', JSON.stringify(updatedFeeds));
-    resetForm();
-    setEditingFeed(null);
-    toast.success('Camera feed updated successfully');
-  };
-
-  const handleDeleteFeed = (feedId: number) => {
-    const updatedFeeds = videoFeeds.filter(feed => {
-      if (feed.id === feedId && feed.videoUrl) {
-        URL.revokeObjectURL(feed.videoUrl);
-      }
-      return feed.id !== feedId;
-    });
-    
-    setVideoFeeds(updatedFeeds);
-    setAnalysisData(prev => prev.filter(data => data.feedId !== feedId));
-    localStorage.setItem('cameraFeeds', JSON.stringify(updatedFeeds));
-    toast.success('Camera feed deleted successfully');
-  };
-
-  const handleDownload = (feed: CameraFeed) => {
-    if (feed.videoFile) {
-      const url = URL.createObjectURL(feed.videoFile);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = feed.videoFile.name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success('Download started');
-    }
-  };
-
-  const handleFullscreen = (feed: CameraFeed) => {
-    setSelectedFeed(feed);
-  };
-
-  const resetForm = () => {
-    setNewFeed({
-      name: '',
-      location: '',
-      streamUrl: '',
-      streamId: '',
-      isWebRTC: false
-    });
-  };
-
   const handleStatusChange = (feedId: number, status: CameraFeed['status']) => {
     setVideoFeeds(prev => prev.map(feed => feed.id === feedId ? {
       ...feed,
@@ -265,8 +155,7 @@ export const VideoFeedsAnalysis = () => {
         </Card>
       </div>;
   }
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       {/* Analysis Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4 bg-card border-border">
@@ -316,81 +205,44 @@ export const VideoFeedsAnalysis = () => {
 
       {/* Analysis Controls */}
       <Card className="p-4 bg-card border-border">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold">Real-time Analysis</h3>
             <p className="text-sm text-muted-foreground">
               {isAnalyzing ? 'Analysis is running...' : 'Start analysis to monitor crowd density in real-time'}
             </p>
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="flex gap-1">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-              >
-                <Grid className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'single' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('single')}
-              >
-                <Maximize2 className="w-4 h-4" />
-              </Button>
-            </div>
+          <div className="flex gap-2">
             <ImportVideoDialog onImportFile={handleImportFile} onImportStream={handleImportStream} />
             <Button onClick={isAnalyzing ? stopAnalysis : startAnalysis} variant={isAnalyzing ? "destructive" : "default"} className="flex items-center gap-2 bg-google-green">
-              {isAnalyzing ? (
-                <>
+              {isAnalyzing ? <>
                   <Pause className="w-4 h-4" />
                   Stop Analysis
-                </>
-              ) : (
-                <>
+                </> : <>
                   <Play className="w-4 h-4" />
                   Start Analysis
-                </>
-              )}
+                </>}
             </Button>
           </div>
         </div>
       </Card>
 
       {/* Video Feeds Grid */}
-      <div className={`grid gap-4 ${
-        viewMode === 'grid' 
-          ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
-          : 'grid-cols-1'
-      }`}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {videoFeeds.map(feed => {
-          const analysis = analysisData.find(data => data.feedId === feed.id);
-          return (
-            <div key={feed.id} className="group">
-              <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="relative">
-                  <div className="text-sm font-medium text-center py-2 bg-muted/50 border-b flex items-center justify-between px-4">
-                    <span>{feed.name} - {feed.location}</span>
-                    {analysis && (
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${getRiskColor(analysis.riskLevel)}`}>
-                        {analysis.riskLevel.toUpperCase()}
-                      </span>
-                    )}
-                  </div>
+        const analysis = analysisData.find(data => data.feedId === feed.id);
+        return <Card key={feed.id} className="overflow-hidden bg-card border-border">
+              <div className="relative">
+                <div className="text-sm font-medium text-center py-2 bg-muted/50 border-b flex items-center justify-between px-4">
+                  <span>{feed.name} - {feed.location}</span>
+                  {analysis && <span className={`px-2 py-1 rounded text-xs font-medium ${getRiskColor(analysis.riskLevel)}`}>
+                      {analysis.riskLevel.toUpperCase()}
+                    </span>}
                 </div>
-                <CameraCard
-                  feed={feed}
-                  webrtcServerUrl={webrtcServerUrl}
-                  viewMode={viewMode}
-                  onStatusChange={handleStatusChange}
-                  onFullscreen={handleFullscreen}
-                  onEdit={handleEditFeed}
-                  onDelete={handleDeleteFeed}
-                  onDownload={feed.isLocalFile ? handleDownload : undefined}
-                />
-                {analysis && (
-                  <div className="p-3 bg-muted/30 border-t">
+                <div className="aspect-video bg-black">
+                  <VideoPlayer feed={feed} onStatusChange={handleStatusChange} />
+                </div>
+                {analysis && <div className="p-3 bg-muted/30 border-t">
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
                         <span className="text-muted-foreground">Count: </span>
@@ -404,30 +256,10 @@ export const VideoFeedsAnalysis = () => {
                     <div className="mt-2 text-xs text-muted-foreground">
                       Last analyzed: {analysis.lastAnalyzed.toLocaleTimeString()}
                     </div>
-                  </div>
-                )}
-              </Card>
-            </div>
-          );
-        })}
+                  </div>}
+              </div>
+            </Card>;
+      })}
       </div>
-
-      {/* Dialogs */}
-      <EditCameraDialog
-        editingFeed={editingFeed}
-        onClose={() => setEditingFeed(null)}
-        newFeed={newFeed}
-        setNewFeed={setNewFeed}
-        onUpdateFeed={handleUpdateFeed}
-        onResetForm={resetForm}
-      />
-
-      <FullscreenVideoDialog
-        selectedFeed={selectedFeed}
-        onClose={() => setSelectedFeed(null)}
-        webrtcServerUrl={webrtcServerUrl}
-        onStatusChange={handleStatusChange}
-      />
-    </div>
-  );
+    </div>;
 };
