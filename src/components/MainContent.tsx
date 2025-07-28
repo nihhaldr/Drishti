@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { VideoFeeds } from '@/components/views/VideoFeeds';
 import { CrowdAnalysis } from '@/components/views/CrowdAnalysis';
 import { IncidentManagement } from '@/components/views/IncidentManagement';
 import { Settings } from '@/components/views/Settings';
@@ -20,8 +19,6 @@ export const MainContent = ({ selectedView }: MainContentProps) => {
     switch (selectedView) {
       case 'overview':
         return <LiveEventMap />;
-      case 'feeds':
-        return <VideoFeeds />;
       case 'crowd':
         return <CrowdAnalysis />;
       case 'incidents':
