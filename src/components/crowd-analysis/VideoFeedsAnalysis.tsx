@@ -6,6 +6,13 @@ import { CameraFeed } from '@/types/cameraFeed';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { ImportVideoDialog } from '@/components/dialogs/ImportVideoDialog';
 import { toast } from 'sonner';
+import { crowdDataService } from '@/services/crowdDataService';
+interface Location {
+  name: string;
+  latitude: number;
+  longitude: number;
+}
+
 interface VideoAnalysisData {
   feedId: number;
   crowdCount: number;
@@ -38,12 +45,12 @@ export const VideoFeedsAnalysis = () => {
       }
     }
   }, []);
-  const handleImportFile = (file: File, name: string, location: string) => {
+  const handleImportFile = (file: File, name: string, location: Location) => {
     const videoUrl = URL.createObjectURL(file);
     const feed: CameraFeed = {
       id: Date.now(),
       name,
-      location,
+      location: location.name,
       status: 'connecting',
       viewers: 0,
       alerts: 0,
@@ -59,6 +66,18 @@ export const VideoFeedsAnalysis = () => {
     // Save to localStorage
     localStorage.setItem('cameraFeeds', JSON.stringify(newVideoFeeds));
 
+    // Add location data to crowd service for map display
+    crowdDataService.updateLocation({
+      name: location.name,
+      capacity: 1000, // Default capacity for video feed locations
+      current: Math.floor(Math.random() * 100) + 50,
+      density: Math.floor(Math.random() * 100),
+      trend: 'stable' as const,
+      timestamp: new Date(),
+      latitude: location.latitude,
+      longitude: location.longitude
+    });
+
     // Add analysis data for the new feed
     const newAnalysis: VideoAnalysisData = {
       feedId: feed.id,
@@ -68,13 +87,13 @@ export const VideoFeedsAnalysis = () => {
       lastAnalyzed: new Date()
     };
     setAnalysisData(prev => [...prev, newAnalysis]);
-    toast.success(`Video feed "${name}" added for analysis`);
+    toast.success(`Video feed "${name}" added for analysis and displayed on live map`);
   };
-  const handleImportStream = (url: string, name: string, location: string) => {
+  const handleImportStream = (url: string, name: string, location: Location) => {
     const feed: CameraFeed = {
       id: Date.now(),
       name,
-      location,
+      location: location.name,
       status: 'connecting',
       viewers: 0,
       alerts: 0,
@@ -86,6 +105,18 @@ export const VideoFeedsAnalysis = () => {
     // Save to localStorage
     localStorage.setItem('cameraFeeds', JSON.stringify(newVideoFeeds));
 
+    // Add location data to crowd service for map display
+    crowdDataService.updateLocation({
+      name: location.name,
+      capacity: 1000, // Default capacity for video feed locations
+      current: Math.floor(Math.random() * 100) + 50,
+      density: Math.floor(Math.random() * 100),
+      trend: 'stable' as const,
+      timestamp: new Date(),
+      latitude: location.latitude,
+      longitude: location.longitude
+    });
+
     // Add analysis data for the new feed
     const newAnalysis: VideoAnalysisData = {
       feedId: feed.id,
@@ -95,7 +126,7 @@ export const VideoFeedsAnalysis = () => {
       lastAnalyzed: new Date()
     };
     setAnalysisData(prev => [...prev, newAnalysis]);
-    toast.success(`Stream "${name}" added for analysis`);
+    toast.success(`Stream "${name}" added for analysis and displayed on live map`);
   };
   const handleStatusChange = (feedId: number, status: CameraFeed['status']) => {
     setVideoFeeds(prev => prev.map(feed => feed.id === feedId ? {

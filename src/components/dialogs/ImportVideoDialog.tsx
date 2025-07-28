@@ -5,17 +5,24 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Upload, Plus, Link } from 'lucide-react';
 import { toast } from 'sonner';
+import { LocationPicker } from '@/components/location/LocationPicker';
+
+interface Location {
+  name: string;
+  latitude: number;
+  longitude: number;
+}
 
 interface ImportVideoDialogProps {
-  onImportFile: (file: File, name: string, location: string) => void;
-  onImportStream: (url: string, name: string, location: string) => void;
+  onImportFile: (file: File, name: string, location: Location) => void;
+  onImportStream: (url: string, name: string, location: Location) => void;
 }
 
 export const ImportVideoDialog = ({ onImportFile, onImportStream }: ImportVideoDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [importType, setImportType] = useState<'file' | 'stream'>('file');
   const [name, setName] = useState('');
-  const [location, setLocation] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [streamUrl, setStreamUrl] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -32,14 +39,14 @@ export const ImportVideoDialog = ({ onImportFile, onImportStream }: ImportVideoD
   };
 
   const handleImport = () => {
-    if (!name || !location) {
-      toast.error('Please fill in camera name and location');
+    if (!name || !selectedLocation) {
+      toast.error('Please fill in camera name and select a location');
       return;
     }
 
     if (importType === 'file') {
       if (selectedFile) {
-        onImportFile(selectedFile, name, location);
+        onImportFile(selectedFile, name, selectedLocation);
         resetForm();
         setIsOpen(false);
         toast.success('Video file imported successfully');
@@ -48,7 +55,7 @@ export const ImportVideoDialog = ({ onImportFile, onImportStream }: ImportVideoD
       }
     } else {
       if (streamUrl) {
-        onImportStream(streamUrl, name, location);
+        onImportStream(streamUrl, name, selectedLocation);
         resetForm();
         setIsOpen(false);
         toast.success('Stream URL added successfully');
@@ -60,7 +67,7 @@ export const ImportVideoDialog = ({ onImportFile, onImportStream }: ImportVideoD
 
   const resetForm = () => {
     setName('');
-    setLocation('');
+    setSelectedLocation(null);
     setStreamUrl('');
     setSelectedFile(null);
     setImportType('file');
@@ -109,10 +116,11 @@ export const ImportVideoDialog = ({ onImportFile, onImportStream }: ImportVideoD
 
           <div>
             <label className="text-sm font-medium block mb-1">Location</label>
-            <Input
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="e.g., North Gate"
+            <LocationPicker
+              onLocationSelect={setSelectedLocation}
+              selectedLocation={selectedLocation}
+              buttonText="Select Location"
+              buttonVariant="outline"
             />
           </div>
 
