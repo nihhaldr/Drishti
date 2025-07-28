@@ -24,7 +24,6 @@ interface SidebarProps {
 
 const menuItems = [
   { id: 'overview', label: 'Live Event Map', icon: Map },
-  { id: 'feeds', label: 'Video Feeds', icon: Camera },
   { id: 'crowd', label: 'Crowd Analysis', icon: Users },
   { id: 'incidents', label: 'Incidents', icon: AlertCircle },
   { id: 'bottleneck', label: 'Bottleneck Analysis', icon: TrendingUp },
