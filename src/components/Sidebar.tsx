@@ -47,7 +47,7 @@ export const Sidebar = ({ selectedView, setSelectedView, collapsed, setCollapsed
             <img 
               src="/lovable-uploads/0d791fe6-9d40-4b59-a4dd-4b21c267d2fe.png" 
               alt="Drishti Logo" 
-              className="w-8 h-8 object-contain rounded-full"
+              className="w-8 h-8 object-contain object-center rounded-full"
             />
           </div>
           {!collapsed && (
